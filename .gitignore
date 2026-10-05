@@ -11,3 +11,6 @@ build/
 dist/
 .DS_Store
 .vscode/
+
+# Configurations générées (contiennent les secrets LiveKit)
+deploy/rendered/

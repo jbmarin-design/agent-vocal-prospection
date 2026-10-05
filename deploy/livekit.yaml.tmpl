@@ -1,0 +1,35 @@
+# Configuration livekit-server — GÉNÉRÉE par deploy/render-config.sh à partir de ../.env
+# Ne pas éditer deploy/rendered/livekit.yaml à la main : modifier ce gabarit ou .env, puis relancer
+#   ./render-config.sh && docker compose up -d --force-recreate livekit
+#
+# Référence des clés : config-sample.yaml du dépôt livekit/livekit.
+
+# Port HTTP/WebSocket (API Twirp + signalisation). Utilisé en local par le worker,
+# l'orchestrateur et livekit-sip (ws://127.0.0.1:7880). Non exposé : filtré par nftables.
+port: 7880
+
+# Redis est OBLIGATOIRE ici : livekit-sip et livekit-server dialoguent par le bus psrpc sur Redis.
+redis:
+  address: 127.0.0.1:6379
+
+rtc:
+  # WebRTC entre livekit-server et ses clients (worker agent, livekit-sip) : tous sur cette VM.
+  tcp_port: 7881
+  port_range_start: ${LIVEKIT_RTC_PORT_START}
+  port_range_end: ${LIVEKIT_RTC_PORT_END}
+  # Les seuls clients WebRTC sont LOCAUX : on annonce l'IP locale de la VM (et pas l'IP publique
+  # NATée, qui obligerait à du « hairpin NAT »). Pas de découverte STUN.
+  use_external_ip: false
+  node_ip: ${LIVEKIT_NODE_IP}
+
+# Paire clé/secret de l'API (générée par install.sh, identique à LIVEKIT_API_KEY / LIVEKIT_API_SECRET de .env).
+keys:
+  ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+
+room:
+  # Room supprimée si personne ne la rejoint / quelques secondes après le départ du dernier participant.
+  empty_timeout: 120
+  departure_timeout: 10
+
+logging:
+  level: ${LIVEKIT_LOG_LEVEL}

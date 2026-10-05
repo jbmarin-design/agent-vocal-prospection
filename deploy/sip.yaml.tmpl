@@ -1,0 +1,38 @@
+# Configuration livekit-sip — GÉNÉRÉE par deploy/render-config.sh à partir de ../.env
+# Ne pas éditer deploy/rendered/sip.yaml à la main : modifier ce gabarit ou .env, puis relancer
+#   ./render-config.sh && docker compose up -d --force-recreate sip
+#
+# Référence des clés : pkg/config/config.go du dépôt livekit/sip.
+
+api_key: ${LIVEKIT_API_KEY}
+api_secret: ${LIVEKIT_API_SECRET}
+ws_url: ws://127.0.0.1:7880
+
+# Même Redis que livekit-server (obligatoire).
+redis:
+  address: 127.0.0.1:6379
+
+# Signalisation SIP (UDP et TCP) et plage RTP. nftables n'ouvre ces ports QU'À l'IP du XiVO.
+sip_port: ${SIP_PORT}
+rtp_port: ${SIP_RTP_PORT_START}-${SIP_RTP_PORT_END}
+
+# Adresse annoncée au XiVO (Via/Contact et c= du SDP) :
+#   - IP de l'interface locale choisie par local_net (topologie « même LAN » ou VM avec IP publique directe) ;
+#   - nat_1_to_1_ip si la VM est derrière un NAT 1:1 (topologie « via Internet »), voir docs/installation.md.
+# use_external_ip (découverte STUN) est volontairement désactivé : on fixe l'IP explicitement.
+use_external_ip: false
+local_net: ${LOCAL_IP}/32
+${SIP_NAT_LINE}
+
+# Sonde de santé HTTP (200 = OK), utilisée par docker compose et healthcheck.sh.
+health_port: ${SIP_HEALTH_PORT}
+
+# Aucun appel entrant n'est attendu : les INVITE non autorisés sont ignorés silencieusement.
+# (Les OPTIONS de « qualify » du XiVO reçoivent toujours 200 OK.)
+hide_inbound_port: true
+
+# Codecs : G.711 A-law/µ-law (+ G.722, DTMF RFC 4733) sont activés par défaut par livekit-sip.
+# Le XiVO négociera alaw/ulaw (voir xivo/README.md).
+
+logging:
+  level: ${SIP_LOG_LEVEL}

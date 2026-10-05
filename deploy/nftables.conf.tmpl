@@ -1,0 +1,55 @@
+#!/usr/sbin/nft -f
+# Pare-feu de la VM agent vocal — GÉNÉRÉ par deploy/render-config.sh (deploy/rendered/avp.nft)
+# Installé dans /etc/nftables.d/avp.nft par install.sh et chargé au démarrage par nftables.service.
+#
+# Principe :
+#   - table dédiée « inet avp » : on ne touche PAS aux tables de Docker (pas de « flush ruleset » ici) ;
+#   - entrée : tout est refusé sauf SSH, ICMP, le trafic local et ce qui est listé ci-dessous ;
+#   - SIP (5060) et RTP (plage livekit-sip) : UNIQUEMENT depuis l'IP du XiVO ;
+#   - ports LiveKit (7880/7881 TCP, plage WebRTC UDP) : locaux, sauf CIDR listés dans LIVEKIT_ALLOWED_CIDRS.
+#
+# Recharger après modification :  sudo nft -f /etc/nftables.d/avp.nft
+
+# Suppression idempotente de la table (créée vide si absente, puis supprimée)
+table inet avp
+delete table inet avp
+
+table inet avp {
+	set xivo_v4 {
+		type ipv4_addr
+		elements = { ${XIVO_IPS} }
+	}
+
+	set admin_v4 {
+		type ipv4_addr
+		flags interval
+		elements = { ${ADMIN_CIDRS} }
+	}
+${LIVEKIT_SET_BLOCK}
+	chain input {
+		type filter hook input priority filter; policy drop;
+
+		ct state established,related accept
+		ct state invalid drop
+		iif "lo" accept
+
+		# Réseaux Docker (builds, éventuels conteneurs en mode bridge)
+		iifname { "docker0", "br-*" } accept
+
+		# ICMP / ICMPv6 (ping, PMTU, découverte de voisins)
+		meta l4proto icmp accept
+		meta l4proto ipv6-icmp accept
+
+		# SSH (administration)
+		tcp dport ${SSH_PORT} ip saddr @admin_v4 accept
+		${SSH_V6_RULE}
+
+		# SIP signalisation + RTP : XiVO uniquement
+		ip saddr @xivo_v4 udp dport ${SIP_PORT} accept
+		ip saddr @xivo_v4 tcp dport ${SIP_PORT} accept
+		ip saddr @xivo_v4 udp dport ${SIP_RTP_PORT_START}-${SIP_RTP_PORT_END} accept
+${LIVEKIT_RULES_BLOCK}
+		# Journalisation limitée des refus (journalctl -k | grep avp-drop)
+		limit rate 5/minute log prefix "avp-drop: " level info
+	}
+}
