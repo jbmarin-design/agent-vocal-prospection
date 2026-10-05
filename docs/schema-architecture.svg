@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 660" font-family="Helvetica, Arial, sans-serif" font-size="13">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#b45309"/>
+    </marker>
+  </defs>
+  <rect width="1100" height="660" fill="#ffffff"/>
+  <text x="550" y="34" text-anchor="middle" font-size="20" font-weight="bold" fill="#0f172a">Agent vocal de prospection OpteoLink — architecture</text>
+  <text x="550" y="56" text-anchor="middle" fill="#64748b">Transport et orchestration auto-hébergés · seules les briques d'IA sont appelées en API</text>
+
+  <!-- Colonne téléphonie -->
+  <rect x="24" y="90" width="210" height="520" rx="12" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="129" y="114" text-anchor="middle" font-weight="bold" fill="#334155">Téléphonie existante</text>
+
+  <rect x="44" y="134" width="170" height="64" rx="8" fill="#fff" stroke="#94a3b8"/>
+  <text x="129" y="160" text-anchor="middle" font-weight="bold" fill="#0f172a">Prospect</text>
+  <text x="129" y="180" text-anchor="middle" fill="#475569">standard, IDEC, directeur</text>
+
+  <rect x="44" y="246" width="170" height="64" rx="8" fill="#fff" stroke="#94a3b8"/>
+  <text x="129" y="272" text-anchor="middle" font-weight="bold" fill="#0f172a">Opérateur</text>
+  <text x="129" y="292" text-anchor="middle" fill="#475569">trunk Sewan…</text>
+
+  <rect x="44" y="358" width="170" height="130" rx="8" fill="#fff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="129" y="384" text-anchor="middle" font-weight="bold" fill="#1d4ed8">XiVO / Asterisk</text>
+  <text x="129" y="406" text-anchor="middle" fill="#475569">trunk statique « livekit »</text>
+  <text x="129" y="424" text-anchor="middle" fill="#475569">contexte avp-from-livekit</text>
+  <text x="129" y="442" text-anchor="middle" fill="#475569">numéro présenté</text>
+  <text x="129" y="460" text-anchor="middle" fill="#475569">MixMonitor (enregistrement)</text>
+  <text x="129" y="478" text-anchor="middle" fill="#475569">poste de JB (transfert)</text>
+
+  <line x1="129" y1="246" x2="129" y2="200" stroke="#475569" stroke-width="1.5" marker-end="url(#a)" marker-start="url(#a)"/>
+  <line x1="129" y1="358" x2="129" y2="312" stroke="#475569" stroke-width="1.5" marker-end="url(#a)" marker-start="url(#a)"/>
+
+  <!-- VM -->
+  <rect x="270" y="90" width="520" height="520" rx="12" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="530" y="114" text-anchor="middle" font-weight="bold" fill="#1e3a8a">VM « agent vocal » — Debian 12 + Docker</text>
+
+  <rect x="290" y="372" width="150" height="96" rx="8" fill="#fff" stroke="#2563eb"/>
+  <text x="365" y="398" text-anchor="middle" font-weight="bold" fill="#0f172a">livekit-sip</text>
+  <text x="365" y="418" text-anchor="middle" fill="#475569">SIP 5060/UDP</text>
+  <text x="365" y="436" text-anchor="middle" fill="#475569">RTP 10000-20000</text>
+  <text x="365" y="454" text-anchor="middle" fill="#475569">pare-feu : IP XiVO</text>
+
+  <rect x="470" y="372" width="150" height="96" rx="8" fill="#fff" stroke="#2563eb"/>
+  <text x="545" y="398" text-anchor="middle" font-weight="bold" fill="#0f172a">livekit-server</text>
+  <text x="545" y="418" text-anchor="middle" fill="#475569">1 appel = 1 room</text>
+  <text x="545" y="436" text-anchor="middle" fill="#475569">dispatch des agents</text>
+
+  <rect x="650" y="390" width="120" height="60" rx="8" fill="#fff" stroke="#94a3b8"/>
+  <text x="710" y="416" text-anchor="middle" font-weight="bold" fill="#0f172a">redis</text>
+  <text x="710" y="436" text-anchor="middle" fill="#475569">bus SIP ↔ server</text>
+
+  <rect x="290" y="140" width="330" height="190" rx="8" fill="#fff" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="455" y="164" text-anchor="middle" font-weight="bold" fill="#166534">agent-worker (LiveKit Agents)</text>
+  <text x="455" y="184" text-anchor="middle" fill="#475569">AMD : humain / répondeur / SVI</text>
+  <rect x="306" y="196" width="140" height="46" rx="6" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="376" y="216" text-anchor="middle" font-weight="bold" fill="#166534">AgentAccueil</text>
+  <text x="376" y="233" text-anchor="middle" font-size="11" fill="#475569">passer le standard</text>
+  <rect x="464" y="196" width="140" height="46" rx="6" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="534" y="216" text-anchor="middle" font-weight="bold" fill="#166534">AgentDecideur</text>
+  <text x="534" y="233" text-anchor="middle" font-size="11" fill="#475569">qualifier, RDV</text>
+  <line x1="446" y1="219" x2="462" y2="219" stroke="#16a34a" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="455" y="266" text-anchor="middle" font-size="12" fill="#475569">outils : rappel · RDV · transfert · opposition · fin</text>
+  <text x="455" y="286" text-anchor="middle" font-size="12" fill="#475569">prompts en couches : base + rôle + campagne + fiche</text>
+  <text x="455" y="306" text-anchor="middle" font-size="12" fill="#475569">garde-fous : annonce IA, 6 min max, silence</text>
+
+  <rect x="650" y="140" width="120" height="190" rx="8" fill="#fff" stroke="#b45309" stroke-width="1.5"/>
+  <text x="710" y="164" text-anchor="middle" font-weight="bold" fill="#92400e">orchestrator</text>
+  <text x="710" y="184" text-anchor="middle" font-size="12" fill="#475569">commande avp</text>
+  <text x="710" y="208" text-anchor="middle" font-size="12" fill="#475569">import prospects</text>
+  <text x="710" y="226" text-anchor="middle" font-size="12" fill="#475569">planificateur</text>
+  <text x="710" y="244" text-anchor="middle" font-size="12" fill="#475569">plages, fériés</text>
+  <text x="710" y="262" text-anchor="middle" font-size="12" fill="#475569">opposition</text>
+  <text x="710" y="280" text-anchor="middle" font-size="12" fill="#475569">post-appel</text>
+  <text x="710" y="298" text-anchor="middle" font-size="12" fill="#475569">rapport hebdo</text>
+
+  <rect x="290" y="510" width="480" height="78" rx="8" fill="#fff" stroke="#94a3b8"/>
+  <text x="530" y="536" text-anchor="middle" font-weight="bold" fill="#0f172a">data/ — SQLite (prospects, appels, opposition) + transcriptions JSON + rapports</text>
+  <text x="530" y="558" text-anchor="middle" fill="#475569">campaigns/*.yaml et prompts/*.md montés en lecture seule : modifiables sans rebuild</text>
+  <text x="530" y="576" text-anchor="middle" fill="#475569">sauvegarde à chaud (avp backup), purge RGPD (avp purge)</text>
+
+  <!-- Flux internes -->
+  <line x1="214" y1="420" x2="288" y2="420" stroke="#2563eb" stroke-width="2" marker-end="url(#a)" marker-start="url(#a)"/>
+  <text x="251" y="410" text-anchor="middle" font-size="11" fill="#1d4ed8">SIP/RTP</text>
+  <line x1="440" y1="420" x2="468" y2="420" stroke="#475569" stroke-width="1.5" marker-end="url(#a)" marker-start="url(#a)"/>
+  <line x1="620" y1="420" x2="648" y2="420" stroke="#475569" stroke-width="1.5" marker-end="url(#a)" marker-start="url(#a)"/>
+  <line x1="545" y1="370" x2="545" y2="332" stroke="#16a34a" stroke-width="2" marker-end="url(#a)" marker-start="url(#a)"/>
+  <text x="538" y="356" text-anchor="end" font-size="11" fill="#166534">audio WebRTC</text>
+  <line x1="710" y1="332" x2="590" y2="372" stroke="#b45309" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#b)"/>
+  <text x="704" y="362" font-size="11" fill="#92400e">dispatch</text>
+  <line x1="455" y1="332" x2="455" y2="506" stroke="#16a34a" stroke-width="1.2" stroke-dasharray="4 4" marker-end="url(#a)"/>
+  <text x="462" y="490" font-size="11" fill="#166534">fin d'appel</text>
+  <line x1="740" y1="332" x2="740" y2="506" stroke="#b45309" stroke-width="1.2" stroke-dasharray="4 4" marker-end="url(#b)" marker-start="url(#b)"/>
+
+  <!-- APIs -->
+  <rect x="826" y="90" width="250" height="520" rx="12" fill="#fffbeb" stroke="#fcd34d"/>
+  <text x="951" y="114" text-anchor="middle" font-weight="bold" fill="#78350f">Services en API</text>
+
+  <rect x="846" y="134" width="210" height="44" rx="8" fill="#fff" stroke="#94a3b8"/>
+  <text x="951" y="153" text-anchor="middle" font-weight="bold" fill="#0f172a">Deepgram nova-3</text>
+  <text x="951" y="170" text-anchor="middle" font-size="12" fill="#475569">les oreilles (STT français)</text>
+  <rect x="846" y="190" width="210" height="44" rx="8" fill="#fff" stroke="#94a3b8"/>
+  <text x="951" y="209" text-anchor="middle" font-weight="bold" fill="#0f172a">Claude Haiku 4.5</text>
+  <text x="951" y="226" text-anchor="middle" font-size="12" fill="#475569">le cerveau pendant l'appel</text>
+  <rect x="846" y="246" width="210" height="44" rx="8" fill="#fff" stroke="#94a3b8"/>
+  <text x="951" y="265" text-anchor="middle" font-weight="bold" fill="#0f172a">Cartesia / ElevenLabs</text>
+  <text x="951" y="282" text-anchor="middle" font-size="12" fill="#475569">la voix (TTS français)</text>
+
+  <rect x="846" y="330" width="210" height="44" rx="8" fill="#fff" stroke="#94a3b8"/>
+  <text x="951" y="349" text-anchor="middle" font-weight="bold" fill="#0f172a">Claude Sonnet 5.5</text>
+  <text x="951" y="366" text-anchor="middle" font-size="12" fill="#475569">analyse et score après l'appel</text>
+  <rect x="846" y="386" width="210" height="58" rx="8" fill="#fff" stroke="#b45309"/>
+  <text x="951" y="407" text-anchor="middle" font-weight="bold" fill="#92400e">Axonaut</text>
+  <text x="951" y="424" text-anchor="middle" font-size="12" fill="#475569">prospects en entrée ; événement,</text>
+  <text x="951" y="438" text-anchor="middle" font-size="12" fill="#475569">opportunité, tâche en sortie</text>
+
+  <polyline points="560,140 560,126 802,126 802,156 844,156" fill="none" stroke="#16a34a" stroke-width="1.3" marker-end="url(#a)"/>
+  <polyline points="575,140 575,130 810,130 810,212 844,212" fill="none" stroke="#16a34a" stroke-width="1.3" marker-end="url(#a)"/>
+  <polyline points="590,140 590,134 818,134 818,268 844,268" fill="none" stroke="#16a34a" stroke-width="1.3" marker-end="url(#a)"/>
+  <line x1="772" y1="286" x2="844" y2="352" stroke="#b45309" stroke-width="1.3" marker-end="url(#b)"/>
+  <line x1="772" y1="300" x2="844" y2="410" stroke="#b45309" stroke-width="1.3" marker-end="url(#b)" marker-start="url(#b)"/>
+
+  <text x="951" y="490" text-anchor="middle" font-size="12" fill="#78350f">Coût estimé : 15 à 40 € / mois</text>
+  <text x="951" y="508" text-anchor="middle" font-size="12" fill="#78350f">pour 100 appels de 3 min</text>
+  <text x="951" y="550" text-anchor="middle" font-size="11" fill="#64748b">Clés dans .env, jamais dans Git</text>
+
+  <text x="550" y="640" text-anchor="middle" font-size="12" fill="#64748b">Flux d'un appel : planificateur → dispatch → worker → INVITE via XiVO → AMD → accueil → décideur → fin → analyse Sonnet → Axonaut</text>
+</svg>

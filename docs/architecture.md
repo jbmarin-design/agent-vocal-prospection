@@ -158,10 +158,11 @@ agent-vocal-prospection/
 │   ├── livekit_admin.py      Création du trunk sortant et des dispatches
 │   ├── axonaut.py            Client API Axonaut
 │   ├── postcall.py           Analyse post-appel + synchronisation Axonaut
-│   ├── agent/                Worker LiveKit : session, agents, outils, transcription
+│   ├── agent/                Worker LiveKit : worker, agents + outils, session, logic (pur)
 │   ├── orchestrator/         Import, planificateur, opposition, rapports
 │   └── cli.py                Commande `avp`
 ├── tests/                    Tests unitaires (pytest)
-├── docs/                     Architecture, installation, XiVO, exploitation, légal, protocoles de test
+├── docs/                     Architecture (+ schema-architecture.svg), installation, XiVO, prompts,
+│                             Axonaut, exploitation, développement, légal, protocoles de test
 └── data/                     Base SQLite, transcriptions, rapports (non versionné)
 ```
