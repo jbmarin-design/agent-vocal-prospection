@@ -1,0 +1,174 @@
+# Campagne EHPAD — interconnexion appel malade / antifugue avec la téléphonie.
+# Voir docs/prompts.md pour modifier ce fichier et itérer.
+# Tout changement de ce fichier change la « version de prompt » enregistrée avec chaque appel.
+
+id: ehpad
+nom: "EHPAD 2026 — appel malade et antifugue"
+actif: false  # passer à true en phase 5 pour que le démon `avp run` appelle cette campagne
+objectif: rdv
+
+cible:
+  interlocuteur: "le directeur ou la directrice de l'établissement"
+  alternatives:
+    - "l'infirmière coordinatrice ou l'infirmier coordinateur, l'IDEC"
+    - "le cadre de santé"
+    - "le responsable technique ou des services généraux"
+
+offre:
+  resume: >-
+    OpteoLink relie les systèmes d'appel malade et d'antifugue, aussi appelé anti-errance,
+    à la téléphonie de l'établissement, en DECT ou en IP sur XiVO. Les alarmes arrivent
+    directement sur les téléphones des soignants, avec la chambre ou la porte concernée,
+    et chaque alarme est tracée. Nous sommes un intégrateur local du Gers et de la
+    Haute-Garonne, avec dix-huit ans d'expérience en téléphonie, et nous assurons la
+    maintenance de proximité.
+  points_forts:
+    - "Les alarmes d'appel malade et d'antifugue sonnent sur les téléphones DECT ou IP des soignants, avec la chambre affichée."
+    - "Traçabilité des alarmes et des délais de prise en charge, utile pour la qualité et les évaluations."
+    - "Continuité de service : renvois et escalade si une alarme n'est pas prise, supervision de l'installation."
+    - "On s'adapte à l'existant : souvent pas besoin de changer tout le système d'appel malade."
+    - "Intégrateur local à Gimont, dans le Gers : intervention rapide et interlocuteur unique."
+    - "Dix-huit ans d'expérience en téléphonie XiVO et Asterisk."
+  preuves:
+    - "OpteoLink travaille déjà avec des EHPAD, des cliniques et des mairies du Sud-Ouest."
+    - "Jean-Baptiste Marin, le fondateur, connaît bien les interconnexions entre appel malade, antifugue et téléphonie."
+
+accroche: >-
+  Nous aidons les EHPAD du Gers et de Haute-Garonne à faire arriver les alarmes d'appel
+  malade et d'antifugue directement sur les téléphones des soignants, sans alarme perdue.
+  Je voulais savoir comment cela se passe chez vous aujourd'hui.
+
+qualification:
+  - id: appel_malade_systeme
+    question: "Quel système d'appel malade utilisez-vous aujourd'hui, et depuis combien de temps environ ?"
+    but: "Marque et ancienneté de l'appel malade : potentiel de modernisation ou d'interconnexion."
+    obligatoire: true
+  - id: antifugue
+    question: "Avez-vous un dispositif antifugue ou anti-errance, par exemple sur les portes ou par bracelet ?"
+    but: "Présence et type de dispositif antifugue."
+    obligatoire: true
+  - id: telephonie
+    question: "Côté téléphonie, les soignants ont-ils des téléphones DECT, et qui est votre prestataire ?"
+    but: "DECT ou IP, marque, prestataire actuel."
+    obligatoire: true
+  - id: irritants
+    question: "Êtes-vous satisfait de la remontée des alarmes ? Y a-t-il des alarmes perdues, des zones mal couvertes ou des pannes ?"
+    but: "Irritants : alarmes perdues, couverture DECT, pannes, délais d'intervention."
+    obligatoire: true
+  - id: echeance
+    question: "Avez-vous un renouvellement de contrat ou un projet de changement prévu dans les prochains mois ?"
+    but: "Échéance de contrat, budget ou projet en cours."
+  - id: decisionnaire
+    question: "Pour ce type de projet, la décision se prend-elle dans l'établissement ou au niveau d'un groupe ou d'un siège ?"
+    but: "Circuit de décision : établissement autonome, groupe, siège, achats centralisés."
+
+objections:
+  - objection: "On a déjà un prestataire."
+    reponse: >-
+      C'est très bien, et le but n'est pas forcément de tout changer. Nous intervenons souvent
+      en complément, pour relier l'appel malade à la téléphonie existante. Un échange de
+      trente minutes avec Jean-Baptiste permet de voir s'il y a quelque chose à améliorer.
+  - objection: "On n'a pas de budget."
+    reponse: >-
+      Je comprends tout à fait. Justement, le rendez-vous ne vous engage à rien, et il sert
+      aussi à préparer le prochain budget avec des éléments concrets.
+  - objection: "Envoyez-moi un mail."
+    reponse: >-
+      Avec plaisir. Pour que le mail vous soit utile, le plus simple est un court échange
+      avec Jean-Baptiste. Seriez-vous d'accord pour un rendez-vous de trente minutes ?
+  - objection: "On dépend du siège, ce n'est pas moi qui décide."
+    reponse: >-
+      Merci de me le préciser. Votre avis de terrain compte beaucoup pour le siège. Un échange
+      avec vous permettrait de préparer un dossier solide. Qui faudrait-il associer côté siège ?
+  - objection: "C'est une IA ? Je ne parle pas aux robots."
+    reponse: >-
+      Oui, je suis l'assistant vocal d'OpteoLink, une intelligence artificielle. Je peux vous
+      proposer que Jean-Baptiste Marin vous rappelle lui-même. Quel moment vous conviendrait ?
+  - objection: "Ça fonctionne très bien chez nous, on n'a besoin de rien."
+    reponse: >-
+      Tant mieux, c'est l'essentiel pour les résidents. Juste par curiosité, les alarmes
+      arrivent-elles bien partout, y compris la nuit et dans les zones éloignées ?
+  - objection: "Je n'ai pas le temps."
+    reponse: >-
+      Je comprends, je ne vais pas vous retenir. Quel serait le meilleur moment pour vous rappeler ?
+  - objection: "C'est combien ?"
+    reponse: >-
+      Cela dépend vraiment de votre installation, je ne peux pas vous donner de prix au
+      téléphone. C'est justement l'objet du rendez-vous avec Jean-Baptiste, qui vous fera
+      une proposition précise.
+
+scoring:
+  chaud: "Irritant exprimé, alarmes perdues ou pannes, ou projet ou échéance dans les douze mois, et accord pour un rendez-vous ou un transfert."
+  tiede: "Intérêt poli, situation à améliorer sans urgence, ou rappel accepté."
+  froid: "Satisfait de l'existant, décision ailleurs sans contact transmis, ou refus."
+
+mots_cles_stt:
+  - OpteoLink
+  - XiVO
+  - EHPAD
+  - IDEC
+  - DECT
+  - antifugue
+  - anti-errance
+  - appel malade
+  - bracelet
+  - Ascom
+  - Legrand
+  - Hager
+  - Tunstall
+  - Gimont
+  - Gers
+  - Haute-Garonne
+
+repondeur:
+  action: raccrocher
+  message: ""
+
+plages:
+  - jours: [1, 2, 3, 4, 5]
+    debut: "10:00"
+    fin: "12:30"
+  - jours: [1, 2, 3, 4, 5]
+    debut: "14:00"
+    fin: "17:00"
+
+max_tentatives: 3
+delai_entre_tentatives_h: 48
+
+rdv:
+  duree_min: 30
+  mode: "en visio, par téléphone ou sur place dans l'établissement"
+  creneaux_proposes: 3
+  delai_min_jours: 2
+  horizon_jours: 15
+  plages:
+    - jours: [1, 2, 3, 4, 5]
+      debut: "09:30"
+      fin: "12:00"
+    - jours: [1, 2, 3, 4, 5]
+      debut: "14:00"
+      fin: "17:30"
+
+# Pipeline Axonaut. À FAIRE PAR JB : créer le pipeline « EHPAD 2026 » et ses étapes dans
+# Axonaut (CRM > Opportunités > Paramètres des pipelines), ou ajuster les noms ci-dessous
+# pour qu'ils correspondent EXACTEMENT (casse et accents) à vos étapes existantes.
+axonaut:
+  pipe: "EHPAD 2026"
+  etape_initiale: "À contacter"
+  etapes:
+    rdv: "RDV planifié"
+    transfert: "RDV planifié"
+    rappel: "Rappel prévu"
+    qualifie: "Qualifié"
+    refus: "Perdu"
+    non_qualifie: "Perdu"
+    barrage: "À contacter"
+    chaud: "Qualifié"
+    tiede: "Rappel prévu"
+    froid: "À contacter"
+
+instructions_specifiques: >-
+  Les EHPAD sont des lieux de soins : si votre interlocuteur est appelé pour une urgence,
+  excusez-vous et proposez de rappeler. Ne parlez jamais des résidents. Ne critiquez jamais
+  le prestataire actuel. Le standard est souvent tenu par l'accueil ou le secrétariat de
+  direction : soyez particulièrement courtois.

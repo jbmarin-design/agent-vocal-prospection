@@ -1,0 +1,145 @@
+# Campagne cabinets médicaux — téléphonie IP, internet, secrétariat, sécurité réseau.
+# Voir docs/prompts.md pour modifier ce fichier et itérer.
+
+id: cabinets-medicaux
+nom: "Cabinets médicaux 2026 — téléphonie et internet"
+actif: false  # passer à true en phase 5 pour que le démon `avp run` appelle cette campagne
+objectif: rdv
+
+cible:
+  interlocuteur: "le médecin gérant ou la personne qui gère le cabinet"
+  alternatives:
+    - "la secrétaire en chef ou la responsable du secrétariat"
+    - "le médecin associé qui s'occupe de l'informatique"
+
+offre:
+  resume: >-
+    OpteoLink installe et maintient la téléphonie IP sur XiVO, l'accès internet et la fibre,
+    et la sécurité réseau des cabinets médicaux. Nous améliorons l'accueil téléphonique :
+    files d'attente, débordement vers une autre secrétaire ou un service externe, messagerie
+    et horaires automatiques. Nous sommes un intégrateur local à Gimont, dans le Gers, avec
+    dix-huit ans d'expérience.
+  points_forts:
+    - "Moins d'appels perdus : file d'attente, message d'accueil, débordement automatique."
+    - "Horaires et fermetures gérés automatiquement, messagerie envoyée par email."
+    - "Une connexion internet fiable, avec un secours si la ligne principale tombe."
+    - "Un pare-feu adapté aux données de santé, et une maintenance de proximité."
+    - "Un seul interlocuteur local pour la téléphonie, internet et le réseau."
+  preuves:
+    - "OpteoLink accompagne des cliniques, des EHPAD et des collectivités du Gers et de Haute-Garonne."
+
+accroche: >-
+  Nous aidons les cabinets médicaux du Gers et de Haute-Garonne à ne plus perdre d'appels
+  au secrétariat et à fiabiliser leur internet. Je voulais savoir comment se passe l'accueil
+  téléphonique chez vous.
+
+qualification:
+  - id: nb_praticiens
+    question: "Combien de praticiens et de secrétaires travaillent au cabinet ?"
+    but: "Taille du cabinet, nombre de postes."
+    obligatoire: true
+  - id: telephonie_actuelle
+    question: "Quel est votre système téléphonique aujourd'hui, et avec quel opérateur ?"
+    but: "Standard, lignes analogiques ou IP, opérateur et prestataire."
+    obligatoire: true
+  - id: accueil_irritants
+    question: "Arrive-t-il que des patients n'arrivent pas à vous joindre, ou que le secrétariat soit débordé ?"
+    but: "Appels perdus, files d'attente, débordement, secrétariat externalisé."
+    obligatoire: true
+  - id: internet
+    question: "Votre connexion internet est-elle fiable ? Avez-vous la fibre ?"
+    but: "Type d'accès, coupures, secours."
+  - id: securite
+    question: "Qui s'occupe de la sécurité informatique et du réseau du cabinet ?"
+    but: "Pare-feu, prestataire informatique, sensibilité aux données de santé."
+  - id: echeance
+    question: "Avez-vous un engagement en cours, ou un projet de changement prévu ?"
+    but: "Échéance de contrat, déménagement, nouveaux praticiens."
+
+objections:
+  - objection: "On a déjà un prestataire."
+    reponse: >-
+      C'est très bien. Un échange de trente minutes avec Jean-Baptiste permet simplement de
+      vérifier si votre installation pourrait éviter des appels perdus. Cela ne vous engage à rien.
+  - objection: "On n'a pas le temps, le cabinet est débordé."
+    reponse: >-
+      Je comprends très bien, c'est justement le sujet. Quel serait le meilleur moment pour
+      que Jean-Baptiste vous rappelle ?
+  - objection: "Envoyez-moi un mail."
+    reponse: >-
+      Avec plaisir. Le plus utile est un court échange pour que la proposition colle à votre
+      cabinet. Seriez-vous d'accord pour trente minutes avec Jean-Baptiste ?
+  - objection: "C'est une IA ?"
+    reponse: >-
+      Oui, je suis l'assistant vocal d'OpteoLink, une intelligence artificielle. Je peux
+      proposer que Jean-Baptiste Marin vous rappelle lui-même, si vous préférez.
+  - objection: "C'est combien ?"
+    reponse: >-
+      Cela dépend de votre installation, je ne peux pas vous donner de prix au téléphone.
+      Jean-Baptiste vous fera une proposition précise après un échange.
+  - objection: "On est déjà engagés avec notre opérateur."
+    reponse: >-
+      Je comprends. Connaître la date de fin d'engagement permet de préparer le changement
+      au bon moment. Savez-vous quand il se termine ?
+
+scoring:
+  chaud: "Appels perdus ou internet instable, projet ou fin d'engagement proche, et accord pour un rendez-vous."
+  tiede: "Intérêt poli ou rappel accepté, sans irritant fort."
+  froid: "Satisfait, pas de besoin, ou refus."
+
+mots_cles_stt:
+  - OpteoLink
+  - XiVO
+  - fibre
+  - secrétariat
+  - débordement
+  - standard
+  - Doctolib
+  - pare-feu
+  - Gimont
+  - Gers
+  - Haute-Garonne
+
+repondeur:
+  action: raccrocher
+  message: ""
+
+plages:
+  - jours: [1, 2, 3, 4, 5]
+    debut: "10:00"
+    fin: "12:00"
+  - jours: [1, 2, 3, 4, 5]
+    debut: "14:00"
+    fin: "16:30"
+
+max_tentatives: 3
+delai_entre_tentatives_h: 48
+
+rdv:
+  duree_min: 30
+  mode: "en visio, par téléphone ou au cabinet"
+  creneaux_proposes: 3
+  delai_min_jours: 2
+  horizon_jours: 15
+
+# Pipeline existant de JB dans Axonaut. Vérifier que les étapes ci-dessous existent
+# (sinon les créer ou ajuster les noms, casse et accents compris).
+axonaut:
+  pipe: "Cabinets médicaux 2026"
+  etape_initiale: "À contacter"
+  etapes:
+    rdv: "RDV planifié"
+    transfert: "RDV planifié"
+    rappel: "À rappeler"
+    qualifie: "Qualifié"
+    refus: "Perdu"
+    non_qualifie: "Hors cible"
+    barrage: "À contacter"
+    chaud: "Qualifié"
+    tiede: "Intéressé"
+    froid: "À contacter"
+
+instructions_specifiques: >-
+  Le secrétariat d'un cabinet est souvent très chargé : soyez encore plus bref, et proposez
+  vite un rappel si la personne a des patients en attente. Ne parlez jamais des patients ni
+  de leurs données.

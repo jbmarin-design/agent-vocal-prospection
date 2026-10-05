@@ -1,0 +1,44 @@
+# Campagne de TEST technique (phase 1) : vérifie l'audio de bout en bout
+# (XiVO → LiveKit SIP → agent → STT → LLM → TTS → retour).
+# Aucune écriture Axonaut (pas de bloc axonaut), une seule tentative, plages tous les jours.
+
+id: echo
+nom: "Test technique écho"
+actif: false  # campagne de test : utilisée seulement par `avp call test`, jamais par le démon
+objectif: qualification
+
+cible:
+  interlocuteur: "la personne qui fait le test"
+
+offre:
+  resume: "Appel de test technique d'OpteoLink, sans démarche commerciale."
+
+accroche: "Ceci est un test technique de l'assistant vocal d'OpteoLink."
+
+qualification: []
+objections: []
+scoring: {}
+mots_cles_stt:
+  - OpteoLink
+  - XiVO
+
+repondeur:
+  action: raccrocher
+  message: ""
+
+plages:
+  - jours: [1, 2, 3, 4, 5, 6, 7]
+    debut: "00:00"
+    fin: "23:59"
+
+max_tentatives: 1
+delai_entre_tentatives_h: 1
+
+instructions_specifiques: >-
+  CAMPAGNE DE TEST. Ignorez le déroulé commercial habituel. La phrase d'ouverture a déjà
+  annoncé le test. Déroulez exactement ceci, une étape à la fois : un, demandez à la personne
+  de dire une phrase de son choix ; deux, répétez mot pour mot ce que vous avez compris, en
+  commençant par « J'ai compris : » ; trois, demandez si le son est clair de son côté ;
+  quatre, remerciez, dites au revoir, puis appelez terminer_appel avec l'issue qualifie et un
+  résumé qui indique si le son était clair. Si la personne ne répond pas, terminez avec
+  l'issue non_qualifie. N'utilisez aucun autre outil.
