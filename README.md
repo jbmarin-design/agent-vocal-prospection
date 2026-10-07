@@ -17,8 +17,8 @@ Le transport audio et l'orchestration sont **auto-hébergés et open source** (L
 - Pour chaque appel, il réveille le **worker** LiveKit, qui fait sonner le prospect via le **trunk SIP statique** du XiVO.
 - Une détection de répondeur écarte les messageries. Si un humain décroche, l'agent **annonce qu'il est une IA et que l'appel est enregistré**, puis :
   - l'**agent accueil** passe le standard ;
-  - l'**agent décideur** qualifie, traite les objections, propose des créneaux ou transfère.
-- En fin d'appel, la transcription est enregistrée. **Claude Sonnet** l'analyse (score chaud, tiède ou froid, objections, prochaine action), puis **Axonaut** est mis à jour : événement, étape d'opportunité, tâche.
+  - l'**agent décideur** qualifie, traite les objections et propose des créneaux libres de ton agenda Google (mardi et jeudi en direct, lundi et vendredi sous réserve de ta confirmation par email).
+- En fin d'appel, la transcription est enregistrée. **Claude Sonnet** l'analyse (score chaud, tiède ou froid, objections, prochaine action), puis **Axonaut** est mis à jour : événement, étape d'opportunité, tâches de rappel et relances d'échéance (fin de contrat dans un ou deux ans). Le RDV est posé dans **Google Agenda**, qui envoie l'invitation au client.
 - Chaque lundi, un **rapport** compare les versions de prompts et propose des améliorations de script.
 
 Le comportement commercial vit dans des **fichiers texte** : `prompts/*.md` et `campaigns/*.yaml`. On les modifie sans toucher au code.
@@ -33,6 +33,7 @@ Le comportement commercial vit dans des **fichiers texte** : `prompts/*.md` et `
 | Configurer le XiVO | [`xivo/README.md`](xivo/README.md), [`docs/xivo-trunk.md`](docs/xivo-trunk.md) |
 | Modifier le script, créer une campagne | [`docs/prompts.md`](docs/prompts.md) |
 | Préparer Axonaut | [`docs/axonaut.md`](docs/axonaut.md) |
+| Brancher Google Agenda (RDV, confirmations) | [`docs/google-agenda.md`](docs/google-agenda.md) |
 | Utiliser au quotidien | [`docs/exploitation.md`](docs/exploitation.md) |
 | Déboguer, faire évoluer le code | [`docs/developpement.md`](docs/developpement.md) |
 | Rester dans les clous | [`docs/cadre-legal.md`](docs/cadre-legal.md) |

@@ -65,6 +65,13 @@ class Settings(BaseSettings):
     axonaut_base_url: str = "https://axonaut.com/api/v2"
     axonaut_user_email: str = Field(default="jbmarin@opteolink.fr", description="Responsable des opportunités")
 
+    # --- Google Agenda + Gmail (RDV, disponibilités, emails de confirmation) ---------
+    google_client_id: str = Field(default="", description="Client OAuth « Application de bureau » (Google Cloud)")
+    google_client_secret: str = ""
+    google_calendar_id: str = Field(default="primary", description="Agenda où poser les RDV")
+    google_oauth_port: int = Field(default=8765, description="Port local de `avp google auth`")
+    rdv_confirm_email: str = Field(default="", description="Destinataire des demandes de confirmation (défaut : AXONAUT_USER_EMAIL)")
+
     # --- Garde-fous d'appel ----------------------------------------------------
     timezone: str = "Europe/Paris"
     max_call_duration_s: int = 360
@@ -85,6 +92,18 @@ class Settings(BaseSettings):
     @property
     def reports_dir(self) -> Path:
         return self.data_dir / "reports"
+
+    @property
+    def google_token_file(self) -> Path:
+        return self.data_dir / "google-token.json"
+
+    @property
+    def google_enabled(self) -> bool:
+        return bool(self.google_client_id and self.google_client_secret and self.google_token_file.exists())
+
+    @property
+    def confirm_email(self) -> str:
+        return self.rdv_confirm_email or self.axonaut_user_email
 
     def ensure_dirs(self) -> None:
         for p in (self.data_dir, self.transcripts_dir, self.reports_dir):

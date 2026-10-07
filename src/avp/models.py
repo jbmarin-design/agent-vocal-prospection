@@ -6,7 +6,7 @@ transitent en JSON (dispatch LiveKit, fichiers de transcription, base SQLite).
 
 from __future__ import annotations
 
-from datetime import datetime, time
+from datetime import date, datetime, time
 from enum import StrEnum
 from typing import Any, Literal
 
@@ -129,9 +129,18 @@ class VoicemailPolicy(BaseModel):
 
 
 class RdvPolicy(BaseModel):
+    """Règles de prise de rendez-vous.
+
+    - `plages` : jours et heures où un RDV est pris **directement** (invitation envoyée au client).
+    - `jours_a_confirmer` : jours (1=lundi … 7=dimanche) proposés seulement si aucun créneau direct ne
+      convient ; le RDV est alors posé « à confirmer » dans l'agenda et JB reçoit un email. Les heures
+      sont celles des `plages`.
+    """
+
     duree_min: int = 30
     mode: str = "visio ou téléphone"
     creneaux_proposes: int = 3
+    creneaux_a_confirmer: int = 2
     delai_min_jours: int = 2
     horizon_jours: int = 15
     plages: list[TimeWindow] = Field(
@@ -140,6 +149,23 @@ class RdvPolicy(BaseModel):
             TimeWindow(debut=time(14, 0), fin=time(17, 30)),
         ]
     )
+    jours_a_confirmer: list[int] = Field(default_factory=list)
+
+    @field_validator("jours_a_confirmer")
+    @classmethod
+    def _check_confirm_days(cls, v: list[int]) -> list[int]:
+        if any(d < 1 or d > 7 for d in v):
+            raise ValueError("jours_a_confirmer doit contenir des entiers 1..7 (1=lundi)")
+        return v
+
+    def needs_confirmation(self, dt: datetime, timezone: str = "Europe/Paris") -> bool:
+        """Vrai si un RDV à cette date doit être confirmé par JB (jour hors plages directes)."""
+        from zoneinfo import ZoneInfo
+
+        local = dt.astimezone(ZoneInfo(timezone)) if dt.tzinfo else dt
+        day = local.isoweekday()
+        direct = any(day in w.jours for w in self.plages)
+        return day in self.jours_a_confirmer and not direct
 
 
 class AxonautMapping(BaseModel):
@@ -147,6 +173,8 @@ class AxonautMapping(BaseModel):
 
     pipe: str
     etape_initiale: str = "À contacter"
+    # Relance d'une échéance lointaine (fin de contrat, décision) : tâche créée N jours avant la date.
+    relance_avant_echeance_jours: int = 90
     # clé = CallOutcome (valeur) ou "chaud"/"tiede"/"froid" ; valeur = nom d'étape Axonaut
     etapes: dict[str, str] = Field(default_factory=dict)
     montant_defaut: float | None = None
@@ -225,6 +253,7 @@ class Rdv(BaseModel):
     avec: str = ""  # nom de la personne
     email: str = ""
     notes: str = ""
+    a_confirmer: bool = False  # jour hors plages directes : JB doit confirmer avant l'invitation
 
 
 class Callback(BaseModel):
@@ -292,6 +321,10 @@ class CallAnalysis(BaseModel):
     points_cles: list[str] = Field(default_factory=list)
     prochaine_action: str = ""
     date_relance: datetime | None = None
+    date_decision: date | None = Field(
+        default=None, description="Date de fin de contrat ou de décision mentionnée (même lointaine)"
+    )
+    objet_decision: str = Field(default="", description="Ce qui arrive à échéance à date_decision")
     rdv_confirme: bool = False
     qualite_appel: int = Field(default=3, ge=1, le=5, description="Qualité de conduite de l'appel par l'agent")
     suggestions_script: list[str] = Field(default_factory=list)

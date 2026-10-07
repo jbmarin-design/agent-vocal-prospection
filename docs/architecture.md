@@ -28,7 +28,7 @@ Contraintes : **100 % maîtrisé et auto-hébergé** pour la partie transport et
                          └────────┼───────────────────────────────────────────────────────────────────────────┼───────┘
                                   │                                                                           │
                                   ▼                                                                           ▼
-                           API Axonaut (CRM)                                   API IA : Deepgram (STT), Anthropic (LLM),
+                    API Axonaut (CRM) + Google Agenda / Gmail                                   API IA : Deepgram (STT), Anthropic (LLM),
                                                                                Cartesia ou ElevenLabs (TTS)
 ```
 
@@ -81,7 +81,8 @@ avp (planificateur)                LiveKit                     agent-worker     
 7. **Post-appel** : `avp postcall run` (en boucle dans le démon) lit les appels `analysis_status='en_attente'`. Claude Sonnet 5.5 renvoie une analyse structurée (score, résumé, objections, prochaine action), puis Axonaut est mis à jour :
    - un événement `nature=3` (appel) sur la société ;
    - l'étape d'opportunité selon le mapping de la campagne ;
-   - une tâche si un rappel ou un rendez-vous est à préparer.
+   - une tâche de rappel, et une tâche de relance si une échéance lointaine est citée (fin de contrat).
+8. **Agenda** (`agenda.py`) : le RDV est créé dans Google Agenda. Le mardi et le jeudi, l'invitation part directement au client. Le lundi, le vendredi, en cas de conflit ou sans email, l'événement est posé « [À CONFIRMER] » et JB reçoit un email. Quand il retire ce préfixe du titre, l'invitation part. Les créneaux proposés tiennent compte de ses occupations (freebusy). Voir `docs/google-agenda.md`.
 
 ## 4. Prompts en couches
 
@@ -158,6 +159,7 @@ agent-vocal-prospection/
 │   ├── livekit_admin.py      Création du trunk sortant et des dispatches
 │   ├── axonaut.py            Client API Axonaut
 │   ├── postcall.py           Analyse post-appel + synchronisation Axonaut
+│   ├── agenda.py             Google Agenda (disponibilités, RDV, confirmations) + Gmail
 │   ├── agent/                Worker LiveKit : worker, agents + outils, session, logic (pur)
 │   ├── orchestrator/         Import, planificateur, opposition, rapports
 │   └── cli.py                Commande `avp`

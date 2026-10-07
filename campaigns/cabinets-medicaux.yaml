@@ -121,6 +121,17 @@ rdv:
   creneaux_proposes: 3
   delai_min_jours: 2
   horizon_jours: 15
+  # RDV pris directement le mardi et le jeudi (invitation envoyée au client)
+  plages:
+    - jours: [2, 4]
+      debut: "09:30"
+      fin: "12:00"
+    - jours: [2, 4]
+      debut: "14:00"
+      fin: "17:30"
+  # Lundi et vendredi : seulement si rien ne convient, à confirmer par JB (email)
+  jours_a_confirmer: [1, 5]
+  creneaux_a_confirmer: 2
 
 # Pipeline existant de JB dans Axonaut. Vérifier que les étapes ci-dessous existent
 # (sinon les créer ou ajuster les noms, casse et accents compris).

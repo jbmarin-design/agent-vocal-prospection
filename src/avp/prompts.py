@@ -311,12 +311,22 @@ def context_section(
                 "Ne le proposez jamais ; proposez un rendez-vous ou un rappel."
             )
         slots = sorted(rdv_slots)
+        direct = [x for x in slots if not campaign.rdv.needs_confirmation(x, timezone)]
+        to_confirm = [x for x in slots if campaign.rdv.needs_confirmation(x, timezone)]
         if slots:
             lines.append(
                 "Créneaux de rendez-vous disponibles. Ne proposez que ceux-ci, deux ou trois à la fois, "
-                "après avoir appelé l'outil proposer_creneaux. Pour confirmer, recopiez la valeur iso exacte :"
+                "après avoir appelé l'outil proposer_creneaux. Pour confirmer, recopiez la valeur iso exacte."
             )
-            lines += [f"- {format_slot_fr(s, timezone)} — iso {slot_iso(s, timezone)}" for s in slots]
+            if direct:
+                lines.append("Créneaux confirmés immédiatement, à proposer en premier :")
+                lines += [f"- {format_slot_fr(x, timezone)} — iso {slot_iso(x, timezone)}" for x in direct]
+            if to_confirm:
+                lines.append(
+                    f"Créneaux sous réserve, à proposer seulement si aucun des précédents ne convient. "
+                    f"Dites alors que {HUMAN_FIRST_NAME} confirmera ce créneau par email :"
+                )
+                lines += [f"- {format_slot_fr(x, timezone)} — iso {slot_iso(x, timezone)}" for x in to_confirm]
         else:
             lines.append(
                 f"Aucun créneau de rendez-vous n'est disponible : proposez que {HUMAN_FIRST_NAME} rappelle, "

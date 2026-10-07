@@ -244,15 +244,27 @@ async def test_sync_rdv_creates_opportunity_events_task(tmp_path: Path):
     assert opp["pipe_name"] == "EHPAD 2026" and opp["step_name"] == "RDV pris"
     assert opp["amount"] == 1500.0 and opp["probability"] == 85.0
     events = ax.of("create_event")
-    call_ev, rdv_ev = events
+    # Le RDV va dans Google Agenda (avp.agenda), pas dans l'agenda Axonaut : un seul événement « appel ».
+    (call_ev,) = events
     assert call_ev["nature"] == 3 and call_ev["title"] == "Appel IA — RDV pris — chaud (85/100)"
     assert call_ev["duration_min"] == 3 and call_ev["date"] == START and call_ev["opportunity_id"] == res["opportunity_id"]
     assert "Combien de lits ? → 80" in call_ev["content"] and "Budget contraint" in call_ev["content"]
     assert str(tmp_path / "transcripts" / "abc123.json") in call_ev["content"]
-    assert rdv_ev["nature"] == 1 and rdv_ev["is_done"] is False and rdv_ev["date"] == rdv_start
-    task = ax.of("create_task")[0]
-    assert task["title"] == "Préparer RDV EHPAD Les Tilleuls" and str(task["due"]) == "2026-10-13"
-    assert res["rdv_event_id"] and len(res["task_ids"]) == 1
+    assert "RDV :" in call_ev["content"]
+    assert ax.of("create_task") == [] and "rdv_event_id" not in res
+
+
+async def test_sync_echeance_lointaine_cree_une_relance(tmp_path: Path):
+    from datetime import date
+
+    ax = FakeAxonaut()
+    an = analysis(score="froid", score_num=15, date_decision="2028-06-30",
+                  objet_decision="contrat de maintenance appel malade")
+    res = await sync_axonaut(record(CallOutcome.REFUS), an, campaign(), axonaut=ax, settings=settings_for(tmp_path))
+    (task,) = ax.of("create_task")
+    assert task["title"].startswith("Relance échéance : contrat de maintenance appel malade")
+    assert task["due"] == date(2028, 6, 30) - timedelta(days=90)
+    assert res["echeance"] == "2028-06-30"
 
 
 async def test_sync_rappel_updates_existing_opportunity(tmp_path: Path):

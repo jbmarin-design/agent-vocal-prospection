@@ -141,13 +141,17 @@ rdv:
   creneaux_proposes: 3
   delai_min_jours: 2
   horizon_jours: 15
+  # RDV pris directement le mardi et le jeudi (invitation envoyée au client)
   plages:
-    - jours: [1, 2, 3, 4, 5]
+    - jours: [2, 4]
       debut: "09:30"
       fin: "12:00"
-    - jours: [1, 2, 3, 4, 5]
+    - jours: [2, 4]
       debut: "14:00"
       fin: "17:30"
+  # Lundi et vendredi : seulement si rien ne convient, à confirmer par JB (email)
+  jours_a_confirmer: [1, 5]
+  creneaux_a_confirmer: 2
 
 # Pipeline Axonaut. À FAIRE PAR JB : créer le pipeline « EHPAD 2026 » et ses étapes dans
 # Axonaut (CRM > Opportunités > Paramètres des pipelines), ou ajuster les noms ci-dessous

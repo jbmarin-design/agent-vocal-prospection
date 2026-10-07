@@ -230,8 +230,20 @@ class AgentDecideur(_BaseProspectAgent):
         if not slots:
             return "Aucun créneau disponible. Proposez que Jean-Baptiste rappelle et utilisez noter_rappel."
         ud.proposed_slots = slots
-        lines = [f"{format_slot_fr(s, ud.settings.timezone)} (iso {s.astimezone(ud.tz).isoformat()})" for s in slots]
-        return "Créneaux disponibles : " + " ; ".join(lines)
+        tz_name = ud.settings.timezone
+
+        def fmt(x) -> str:
+            return f"{format_slot_fr(x, tz_name)} (iso {x.astimezone(ud.tz).isoformat()})"
+
+        direct = [fmt(x) for x in slots if not ud.campaign.rdv.needs_confirmation(x, tz_name)]
+        later = [fmt(x) for x in slots if ud.campaign.rdv.needs_confirmation(x, tz_name)]
+        out = "Créneaux confirmés immédiatement : " + (" ; ".join(direct) or "aucun") + "."
+        if later:
+            out += (
+                " Seulement si aucun ne convient, créneaux sous réserve (Jean-Baptiste confirmera par email) : "
+                + " ; ".join(later) + "."
+            )
+        return out
 
     @function_tool
     async def confirmer_rdv(
@@ -251,19 +263,28 @@ class AgentDecideur(_BaseProspectAgent):
             raise ToolError("Ce créneau ne fait pas partie des créneaux proposés. Appelez proposer_creneaux.")
         if not looks_like_email(email):
             raise ToolError("Email invalide. Faites-le épeler et répétez-le pour vérifier.")
+        to_confirm = ud.campaign.rdv.needs_confirmation(slot, ud.settings.timezone)
         ud.state.rdv = Rdv(
             start=slot,
             duree_min=ud.campaign.rdv.duree_min,
             mode=ud.campaign.rdv.mode,
             avec=(nom or ud.state.contact_name).strip(),
             email=email.strip().lower(),
+            a_confirmer=to_confirm,
         )
         ud.state.contact_email = email.strip().lower()
         if nom and not ud.state.contact_name:
             ud.state.contact_name = nom.strip()
         logger.info("RDV confirmé : %s (%s)", slot.isoformat(), email)
+        if to_confirm:
+            return (
+                f"Rendez-vous noté sous réserve pour le {format_slot_fr(slot, ud.settings.timezone)}. "
+                "Dites que Jean-Baptiste le confirmera par email dans la journée, à l'adresse donnée. "
+                "Récapitulez brièvement, remerciez, dites au revoir, puis appelez terminer_appel avec l'issue rdv."
+            )
         return (
             f"Rendez-vous enregistré pour le {format_slot_fr(slot, ud.settings.timezone)}. "
+            "Dites qu'une invitation va arriver par email. "
             "Récapitulez brièvement, remerciez, dites au revoir, puis appelez terminer_appel avec l'issue rdv."
         )
 

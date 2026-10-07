@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import inspect
 import logging
 import signal
 from collections.abc import Awaitable, Callable, Collection, Sequence
@@ -35,7 +36,8 @@ from .slots import compute_rdv_slots
 log = logging.getLogger("avp.planificateur")
 
 DispatchFn = Callable[..., Awaitable[str]]
-BusyProvider = Callable[[datetime], Sequence[tuple[datetime, datetime]]]
+# Occupations de JB (agenda) : fonction synchrone ou coroutine.
+BusyProvider = Callable[[datetime], Any]
 
 RETRY_AFTER_DISPATCH_ERROR = timedelta(minutes=15)
 STALE_MARGIN = timedelta(minutes=10)
@@ -192,9 +194,9 @@ async def launch_call(
 class Scheduler:
     """Boucle de planification + boucle post-appel.
 
-    Paramètres injectables (tests) : `dispatch`, `postcall_fn`, `campaign_loader`, `busy_provider`.
-    `busy_provider(now)` doit renvoyer les occupations de JB (agenda) : point d'extension pour
-    Google Agenda, voir `slots.py`.
+    Paramètres injectables (tests) : `dispatch`, `postcall_fn`, `campaign_loader`, `busy_provider`,
+    `agenda_fn`. `busy_provider(now)` renvoie les occupations de JB (Google Agenda, `agenda.BusyCache`) ;
+    `agenda_fn()` traite les RDV à confirmer (`agenda.watch_confirmations`).
     """
 
     def __init__(
@@ -206,6 +208,7 @@ class Scheduler:
         postcall_fn: Callable[[], Awaitable[Any]] | None = None,
         campaign_loader: Callable[[], list[Campaign]] | None = None,
         busy_provider: BusyProvider | None = None,
+        agenda_fn: Callable[[], Awaitable[Any]] | None = None,
         tick_s: float = 20.0,
         postcall_interval_s: float = 60.0,
         launch_spacing_s: float = 3.0,
@@ -217,6 +220,7 @@ class Scheduler:
         self.postcall_fn = postcall_fn
         self.campaign_loader = campaign_loader or (lambda: list_campaigns(self.settings.campaigns_dir))
         self.busy_provider = busy_provider
+        self.agenda_fn = agenda_fn
         self.tick_s = tick_s
         self.postcall_interval_s = postcall_interval_s
         self.launch_spacing_s = launch_spacing_s
@@ -324,7 +328,8 @@ class Scheduler:
         busy: Sequence[tuple[datetime, datetime]] = ()
         if self.busy_provider is not None:
             try:
-                busy = self.busy_provider(now)
+                res = self.busy_provider(now)
+                busy = await res if inspect.isawaitable(res) else res
             except Exception as e:
                 log.warning("Agenda indisponible, créneaux calculés sans lui : %s", e)
         try:
@@ -358,9 +363,23 @@ class Scheduler:
             log.info("Post-appel : %s", ", ".join(f"{k}={v}" for k, v in result.items()))
         return result if isinstance(result, dict) else None
 
+    async def agenda_once(self) -> Any:
+        """RDV « à confirmer » : envoie l'invitation dès que JB a confirmé dans Google Agenda."""
+        if self.agenda_fn is None:
+            return None
+        try:
+            result = await self.agenda_fn()
+        except Exception as e:
+            log.warning("Agenda : vérification des confirmations impossible (%s)", e)
+            return None
+        if isinstance(result, dict) and result.get("confirmes"):
+            log.info("Agenda : %s RDV confirmé(s), invitation(s) envoyée(s)", result["confirmes"])
+        return result
+
     async def _postcall_loop(self) -> None:
         while not self._stop.is_set():
             await self.postcall_once()
+            await self.agenda_once()
             await self._sleep(self.postcall_interval_s)
 
     async def _schedule_loop(self) -> None:

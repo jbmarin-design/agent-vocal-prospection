@@ -161,7 +161,11 @@ def cmd_check(args: argparse.Namespace) -> int:
         "Trunk SIP sortant", s.sip_outbound_trunk_id or "SIP_OUTBOUND_TRUNK_ID vide : lancer `avp trunk create`"
     )
     (ok if s.xivo_sip_address else warn)("Adresse XiVO", s.xivo_sip_address or "XIVO_SIP_ADDRESS vide")
-    (ok if s.transfer_target else warn)("Cible de transfert", s.transfer_target or "TRANSFER_TARGET vide")
+    ok("Transfert à chaud", s.transfer_target or "désactivé (TRANSFER_TARGET vide) : RDV ou rappel uniquement")
+    if s.google_enabled:
+        ok("Google Agenda", f"configuré ({s.google_calendar_id}), confirmations à {s.confirm_email}")
+    else:
+        warn("Google Agenda", "non configuré : voir docs/google-agenda.md puis `avp google auth`")
     if s.dry_run:
         warn("Mode simulation", "DRY_RUN=true : aucun appel réel, aucune écriture Axonaut")
 
@@ -283,10 +287,20 @@ def cmd_call_test(args: argparse.Namespace) -> int:
     from .orchestrator.scheduler import CallBlocked, DispatchError, closed_days, launch_call
 
     test_mode = not args.live_crm
+
+    async def _go() -> str:
+        busy: Any = ()
+        busy_provider, _ = _google_hooks(s)
+        if busy_provider is not None:
+            try:
+                busy = await busy_provider(db.utcnow())
+            except Exception as e:  # noqa: BLE001
+                _out(f"Agenda Google indisponible ({e}) : créneaux calculés sans lui.")
+        return await launch_call(prospect, campaign, attempt=1, test_mode=test_mode, settings=s,
+                                 extra_closed=closed_days(s), busy=busy)
+
     try:
-        call_id = asyncio.run(
-            launch_call(prospect, campaign, attempt=1, test_mode=test_mode, settings=s, extra_closed=closed_days(s))
-        )
+        call_id = asyncio.run(_go())
     except CallBlocked as e:
         raise CliError(str(e)) from e
     except DispatchError as e:
@@ -433,6 +447,126 @@ def _campaign_stats(args: argparse.Namespace, s: Settings) -> int:
     return 0
 
 
+def _google_hooks(s: Settings) -> tuple[Any, Any]:
+    """Disponibilités et confirmations Google Agenda, si `avp google auth` a été fait."""
+    if not s.google_enabled:
+        logging.getLogger("avp").warning(
+            "Google Agenda non configuré : créneaux proposés sans vérifier l'agenda (voir docs/google-agenda.md)"
+        )
+        return None, None
+    from .agenda import BusyCache, GoogleClient, watch_confirmations
+
+    async def agenda_fn() -> dict[str, int]:
+        async with GoogleClient(s) as g:
+            return await watch_confirmations(g, s)
+
+    return BusyCache(s), agenda_fn
+
+
+# ---------------------------------------------------------------------------
+# google
+# ---------------------------------------------------------------------------
+
+
+def cmd_google_auth(args: argparse.Namespace) -> int:
+    """Autorisation OAuth « application de bureau » : redirection vers 127.0.0.1:<port> de cette machine."""
+    import secrets
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    from urllib.parse import parse_qs, urlparse
+
+    from .agenda import auth_url, exchange_code
+
+    s = _settings()
+    if not (s.google_client_id and s.google_client_secret):
+        raise CliError("GOOGLE_CLIENT_ID et GOOGLE_CLIENT_SECRET doivent être renseignés dans .env "
+                       "(voir docs/google-agenda.md)")
+    s.ensure_dirs()
+    port = s.google_oauth_port
+    redirect = f"http://127.0.0.1:{port}/"
+    state = secrets.token_urlsafe(16)
+    got: dict[str, str] = {}
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802
+            q = parse_qs(urlparse(self.path).query)
+            got.update({k: v[0] for k, v in q.items()})
+            ok = "code" in got and got.get("state") == state
+            self.send_response(200 if ok else 400)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            msg = "Autorisation reçue, vous pouvez fermer cet onglet." if ok else "Autorisation refusée ou invalide."
+            self.wfile.write(f"<p>{msg}</p>".encode())
+
+        def log_message(self, *a: Any) -> None:
+            pass
+
+    _out("1. Depuis votre PC, ouvrez un tunnel SSH vers cette VM (laisser la fenêtre ouverte) :")
+    _out(f"     ssh -L {port}:127.0.0.1:{port} <utilisateur>@<IP de la VM>")
+    _out("2. Ouvrez ce lien dans le navigateur de votre PC et connectez-vous avec le compte de l'agenda :")
+    _out(f"\n{auth_url(s, redirect, state)}\n")
+    _out(f"En attente de la réponse de Google sur {redirect} …")
+    server = HTTPServer(("127.0.0.1", port), Handler)
+    server.timeout = 30
+    deadline = _time.monotonic() + 600
+    while "code" not in got and "error" not in got:
+        if _time.monotonic() > deadline:
+            server.server_close()
+            raise CliError("délai dépassé (10 min) sans réponse de Google")
+        server.handle_request()
+    server.server_close()
+    if "error" in got:
+        raise CliError(f"autorisation refusée : {got['error']}")
+    if got.get("state") != state:
+        raise CliError("réponse invalide (state différent) : relancer la commande")
+    exchange_code(s, got["code"], redirect)
+    _out(f"Jeton enregistré dans {s.google_token_file}. Vérifier avec `avp google check`.")
+    return 0
+
+
+def cmd_google_check(args: argparse.Namespace) -> int:
+    from datetime import timedelta
+
+    from .agenda import GoogleClient
+    from .prompts import format_datetime_fr
+
+    s = _settings()
+
+    async def _go() -> tuple[dict, list]:
+        async with GoogleClient(s) as g:
+            info = await g.calendar_info()
+            now = db.utcnow()
+            return info, await g.freebusy(now, now + timedelta(days=7))
+
+    try:
+        info, busy = asyncio.run(_go())
+    except Exception as e:
+        raise CliError(f"Google Agenda : {e}") from e
+    _out(f"Agenda : {info.get('summary')} ({info.get('id')}), fuseau {info.get('timeZone')}")
+    _out(f"Occupations des 7 prochains jours : {len(busy)}")
+    for b_start, b_end in busy[:10]:
+        _out(f"  - {format_datetime_fr(b_start, s.timezone)} → {format_datetime_fr(b_end, s.timezone)}")
+    return 0
+
+
+def cmd_google_test_mail(args: argparse.Namespace) -> int:
+    from .agenda import GoogleClient
+
+    s = _settings()
+    to = args.to or s.confirm_email
+
+    async def _go() -> None:
+        async with GoogleClient(s) as g:
+            await g.send_mail(to, "Test de l'agent vocal OpteoLink",
+                              "Cet email confirme que l'agent vocal peut vous envoyer les demandes de confirmation de RDV.")
+
+    try:
+        asyncio.run(_go())
+    except Exception as e:
+        raise CliError(f"Gmail : {e}") from e
+    _out(f"Email de test envoyé à {to}.")
+    return 0
+
+
 def _run_scheduler(campaign_ids: Sequence[str] | None, s: Settings) -> int:
     _ensure_db(s)
     from .orchestrator.scheduler import Scheduler
@@ -440,7 +574,8 @@ def _run_scheduler(campaign_ids: Sequence[str] | None, s: Settings) -> int:
     if campaign_ids:
         for cid in campaign_ids:
             _load_campaign(cid, s)  # erreur claire si la campagne n'existe pas
-    sched = Scheduler(campaign_ids, settings=s)
+    busy_provider, agenda_fn = _google_hooks(s)
+    sched = Scheduler(campaign_ids, settings=s, busy_provider=busy_provider, agenda_fn=agenda_fn)
     try:
         asyncio.run(sched.run())
     except KeyboardInterrupt:
@@ -857,6 +992,13 @@ def build_parser() -> argparse.ArgumentParser:
     x.add_argument("--company", type=int, help="ID de société Axonaut")
     x.add_argument("--search", help="recherche par nom")
     x.add_argument("--raw", action="store_true", help="affiche aussi le JSON brut")
+
+    p = _sub(sp, "google", "Google Agenda et Gmail (RDV, disponibilités, emails de confirmation)")
+    gsp = p.add_subparsers(parser_class=_FrenchArgumentParser, dest="google_cmd", metavar="<action>", required=True)
+    _sub(gsp, "auth", "autorise l'accès à l'agenda et à l'envoi d'emails (une seule fois)", cmd_google_auth)
+    _sub(gsp, "check", "vérifie l'accès et affiche les prochaines occupations", cmd_google_check)
+    x = _sub(gsp, "test-mail", "envoie un email de test à l'adresse de confirmation", cmd_google_test_mail)
+    x.add_argument("--to", help="destinataire (défaut : RDV_CONFIRM_EMAIL ou AXONAUT_USER_EMAIL)")
 
     x = _sub(sp, "purge", "supprime les transcriptions anciennes (RGPD)", cmd_purge)
     x.add_argument("--days", type=int, default=183, help="ancienneté en jours (défaut : %(default)s ≈ 6 mois)")

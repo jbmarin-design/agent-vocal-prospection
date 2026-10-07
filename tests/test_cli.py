@@ -244,7 +244,7 @@ def test_run_scheduler_for_campaign(fakes: dict[str, Any], monkeypatch: pytest.M
     seen: dict[str, Any] = {}
 
     class FakeScheduler:
-        def __init__(self, campaign_ids: Any, *, settings: Any) -> None:
+        def __init__(self, campaign_ids: Any, *, settings: Any, **hooks: Any) -> None:
             seen["ids"] = campaign_ids
 
         async def run(self) -> None:

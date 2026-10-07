@@ -36,6 +36,8 @@ Le score mesure **l'intérêt commercial du prospect** (pas la qualité de l'app
 - `equipement_actuel` : marque, modèle, type de standard, système d'appel malade, box, firewall… cités.
 - `prestataire_actuel` : l'intégrateur ou l'opérateur cité.
 - `echeance_contrat` : telle que dite (« fin 2027 », « dans un an », « mars »).
+- `date_decision` : si une échéance est citée (fin de contrat, renouvellement, appel d'offres, budget voté, décision du siège), même dans un ou deux ans et **même en cas de refus**, sa date au format `AAAA-MM-JJ`, calculée à partir de la date de l'appel. « Fin 2027 » → `2027-12-31` ; « dans un an » → la date de l'appel plus un an ; « en mars » → le 1er mars suivant. `null` si aucune échéance n'est citée. Cette date sert à programmer une relance des mois à l'avance.
+- `objet_decision` : ce qui arrive à échéance, en quelques mots (« contrat de maintenance appel malade », « renouvellement de la téléphonie »).
 - `objections` : chaque objection exprimée par le prospect, reformulée brièvement (« Déjà équipé, satisfait du prestataire actuel »).
 - `points_cles` : informations utiles pour la suite (nombre de lits, de postes, de sites, projet de travaux, décision en comité, budget voté…), uniquement si dites.
 - `prochaine_action` : action concrète pour OpteoLink (« Préparer le RDV du 12/11 : audit appel malade Ascom », « Rappeler Mme X la semaine du 17/11 », « Aucune — ne plus appeler »).

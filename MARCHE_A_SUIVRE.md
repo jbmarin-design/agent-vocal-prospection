@@ -18,7 +18,7 @@ On ne passe pas à une phase tant que la précédente n'est pas validée et cons
 | 1 | Infra : Docker, LiveKit, SIP, trunk XiVO, appel « écho » | 2 à 4 h | `docs/protocoles/phase-1.md` |
 | 2 | Agent conversationnel : console, puis téléphone | 2 h + itérations | `docs/protocoles/phase-2.md` |
 | 3 | Axonaut en lecture : import des prospects | 1 h | `docs/protocoles/phase-3.md` |
-| 4 | Post-appel : analyse Sonnet et écriture Axonaut | 1 h | `docs/protocoles/phase-4.md` |
+| 4 | Post-appel : analyse Sonnet, Axonaut, Google Agenda | 1 h 30 | `docs/protocoles/phase-4.md`, `docs/google-agenda.md` |
 | 5 | Campagnes automatiques : plages, tentatives, opposition | 1 h + 1 journée d'observation | `docs/protocoles/phase-5.md` |
 | 6 | Boucle d'amélioration : rapport hebdomadaire | 30 min par semaine | `docs/protocoles/phase-6.md` |
 | 7 | Production et pilote de 20 appels EHPAD | 1 semaine | `docs/protocoles/phase-7.md` |
@@ -280,6 +280,19 @@ avp calls show <call_id>
 - une tâche si un RDV ou un rappel a été convenu.
 
 Le détail est dans `docs/protocoles/phase-4.md`.
+
+---
+
+### 4.bis Google Agenda (RDV et confirmations)
+
+**Faire** : suivre `docs/google-agenda.md`. Il faut créer un projet Google Cloud avec les API Calendar et Gmail, un écran de consentement de type Interne et un client OAuth « bureau ». Ensuite, `avp google auth` à travers un tunnel SSH.
+
+**Vérifier** :
+```bash
+avp google check && avp google test-mail
+avp call test --number +336XXXXXXXX --campaign ehpad --live-crm --name "Société TEST"
+```
+Pendant l'appel, accepte un mardi ou un jeudi en donnant ton adresse email. L'invitation doit arriver et l'événement apparaître dans ton agenda. Recommence en refusant les mardis et jeudis pour obtenir un vendredi : tu dois recevoir l'email « RDV à confirmer ». Retire « [À CONFIRMER] » du titre de l'événement : l'invitation part dans la minute.
 
 ---
 

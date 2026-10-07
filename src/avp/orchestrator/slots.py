@@ -14,14 +14,11 @@ Règles (section `rdv` de la campagne) :
 - répartition : un créneau par jour en priorité, en alternant matin et
   après-midi, autour d'heures « naturelles » (10h00 le matin, 14h30 l'après-midi).
 
-Point d'extension `busy` — agenda de JB
----------------------------------------
-Aujourd'hui `busy` est vide par défaut. Pour éviter de proposer un créneau où JB
-est déjà pris, il suffira de fournir la liste de ses occupations
-(`[(début, fin), ...]`, datetimes avec fuseau), par exemple lue depuis Google
-Agenda (API `freebusy.query`) ou un export ICS, et de la passer à
-`compute_rdv_slots(..., busy=...)`. Le planificateur accepte pour cela un
-`busy_provider` (voir `Scheduler`), appelé avant chaque lancement d'appel.
+Agenda de JB
+------------
+`busy` contient les occupations de JB lues dans Google Agenda (`agenda.BusyCache`, branché par
+`avp run` et `avp call test` quand `avp google auth` a été fait). Les jours `rdv.jours_a_confirmer`
+donnent des créneaux supplémentaires, proposés seulement si aucun créneau direct ne convient.
 """
 
 from __future__ import annotations
@@ -61,13 +58,18 @@ def candidate_slots_for_day(
     tz: ZoneInfo,
     earliest: datetime,
     busy: Sequence[tuple[datetime, datetime]] = (),
+    days_override: Collection[int] | None = None,
 ) -> list[datetime]:
-    """Tous les débuts possibles (au quart d'heure) pour un jour donné."""
+    """Tous les débuts possibles (au quart d'heure) pour un jour donné.
+
+    `days_override` remplace les jours des plages (heures conservées) : sert aux jours « à confirmer ».
+    """
     rdv = campaign.rdv
     duration = timedelta(minutes=rdv.duree_min)
     out: list[datetime] = []
     for window in rdv.plages:
-        if day.isoweekday() not in window.jours:
+        allowed = days_override if days_override is not None else window.jours
+        if day.isoweekday() not in allowed:
             continue
         start = _ceil_quarter(datetime.combine(day, window.debut, tzinfo=tz))
         end_limit = datetime.combine(day, window.fin, tzinfo=tz)
@@ -91,6 +93,45 @@ def _pick(candidates: list[datetime], afternoon: bool) -> datetime | None:
     return min(half, key=lambda c: (dist(c), c))
 
 
+def _choose(per_day: list[list[datetime]], count: int, duration: timedelta,
+            taken: Sequence[datetime] = ()) -> list[datetime]:
+    """Choisit `count` créneaux : un par jour en alternant matin / après-midi, puis complète."""
+    chosen: list[datetime] = []
+
+    def free(c: datetime) -> bool:
+        others = [*taken, *chosen]
+        return not _overlaps(c, c + duration, [(x, x + duration) for x in others])
+
+    # 1er passage : un créneau par jour, en alternant matin / après-midi.
+    afternoon = False  # on commence par un matin
+    for cands in per_day:
+        if len(chosen) >= count:
+            break
+        cands = [c for c in cands if free(c)]
+        pick = _pick(cands, afternoon) or _pick(cands, not afternoon)
+        if pick is not None:
+            chosen.append(pick)
+            afternoon = pick.time() < NOON  # le suivant dans l'autre demi-journée
+    # 2e passage (peu de jours disponibles) : l'autre demi-journée des jours déjà retenus.
+    for cands in per_day:
+        if len(chosen) >= count:
+            break
+        halves = {c.time() >= NOON for c in chosen if c.date() == cands[0].date()}
+        for half in (False, True):
+            if len(chosen) < count and half not in halves:
+                pick = _pick([c for c in cands if free(c)], half)
+                if pick is not None:
+                    chosen.append(pick)
+    # 3e passage : n'importe quel créneau libre restant, au plus tôt.
+    for cands in per_day:
+        for c in cands:
+            if len(chosen) >= count:
+                break
+            if free(c):
+                chosen.append(c)
+    return sorted(chosen)[:count]
+
+
 def compute_rdv_slots(
     campaign: Campaign,
     now: datetime,
@@ -99,11 +140,16 @@ def compute_rdv_slots(
     timezone: str = "Europe/Paris",
     *,
     extra_closed: Collection[date] = (),
+    include_confirm: bool = True,
 ) -> list[datetime]:
-    """Retourne au plus `n` créneaux (datetimes avec fuseau `timezone`), triés.
+    """Retourne les créneaux proposables (datetimes avec fuseau `timezone`), triés.
 
-    `n` vaut par défaut `campaign.rdv.creneaux_proposes`. Liste vide si aucun
-    créneau n'est possible dans l'horizon.
+    - au plus `n` créneaux **directs** (jours des `rdv.plages`), `n` valant par défaut
+      `campaign.rdv.creneaux_proposes` ;
+    - plus, si `include_confirm`, au plus `rdv.creneaux_a_confirmer` créneaux sur les jours
+      `rdv.jours_a_confirmer` (à confirmer par JB : voir `RdvPolicy.needs_confirmation`).
+
+    Liste vide si aucun créneau n'est possible dans l'horizon.
     """
     tz = ZoneInfo(timezone)
     if now.tzinfo is None:
@@ -116,46 +162,23 @@ def compute_rdv_slots(
 
     earliest = now_local + timedelta(days=rdv.delai_min_jours)
     last_day = (now_local + timedelta(days=rdv.horizon_jours)).date()
-
-    per_day: list[list[datetime]] = []
-    d = earliest.date()
-    while d <= last_day:
-        if is_business_day(d, extra_closed=extra_closed):
-            cands = candidate_slots_for_day(campaign, d, tz, earliest, busy)
-            if cands:
-                per_day.append(cands)
-        d += timedelta(days=1)
-
     duration = timedelta(minutes=rdv.duree_min)
-    chosen: list[datetime] = []
 
-    def free(c: datetime) -> bool:
-        return not _overlaps(c, c + duration, [(x, x + duration) for x in chosen])
+    def per_day(days_override: Collection[int] | None) -> list[list[datetime]]:
+        out: list[list[datetime]] = []
+        d = earliest.date()
+        while d <= last_day:
+            if is_business_day(d, extra_closed=extra_closed):
+                cands = candidate_slots_for_day(campaign, d, tz, earliest, busy, days_override)
+                if cands:
+                    out.append(cands)
+            d += timedelta(days=1)
+        return out
 
-    # 1er passage : un créneau par jour, en alternant matin / après-midi.
-    afternoon = False  # on commence par un matin
-    for cands in per_day:
-        if len(chosen) >= count:
-            break
-        pick = _pick(cands, afternoon) or _pick(cands, not afternoon)
-        if pick is not None:
-            chosen.append(pick)
-            afternoon = pick.time() < NOON  # le suivant dans l'autre demi-journée
-    # 2e passage (peu de jours disponibles) : l'autre demi-journée des jours déjà retenus.
-    for cands in per_day:
-        if len(chosen) >= count:
-            break
-        taken = {c.time() >= NOON for c in chosen if c.date() == cands[0].date()}
-        for half in (False, True):
-            if len(chosen) < count and half not in taken:
-                pick = _pick([c for c in cands if free(c)], half)
-                if pick is not None:
-                    chosen.append(pick)
-    # 3e passage : n'importe quel créneau libre restant, au plus tôt.
-    for cands in per_day:
-        for c in cands:
-            if len(chosen) >= count:
-                break
-            if free(c):
-                chosen.append(c)
-    return sorted(chosen)[:count]
+    chosen = _choose(per_day(None), count, duration)
+    if include_confirm and rdv.jours_a_confirmer and rdv.creneaux_a_confirmer > 0:
+        direct_days = {d for w in rdv.plages for d in w.jours}
+        confirm_days = [d for d in rdv.jours_a_confirmer if d not in direct_days]
+        if confirm_days:
+            chosen += _choose(per_day(confirm_days), rdv.creneaux_a_confirmer, duration, taken=chosen)
+    return sorted(chosen)

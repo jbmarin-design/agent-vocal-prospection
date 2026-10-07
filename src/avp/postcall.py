@@ -555,48 +555,9 @@ async def sync_axonaut(
         return result
 
     if st.rdv is not None and (outcome is CallOutcome.RDV or (analysis and analysis.rdv_confirme)):
-        rdv = st.rdv
-        try:
-            ev = await axonaut.create_event(
-                company_id=company_id,
-                title=f"RDV {campaign.nom} — {p.name}"[:255],
-                content="\n".join(
-                    x
-                    for x in (
-                        f"Rendez-vous pris par l'agent vocal IA le {_fmt_dt(call_date, tz)}.",
-                        f"Avec : {rdv.avec}" if rdv.avec else "",
-                        f"Email : {rdv.email}" if rdv.email else "",
-                        f"Mode : {rdv.mode}" if rdv.mode else "",
-                        f"Notes : {rdv.notes}" if rdv.notes else "",
-                        f"Résumé de l'appel : {analysis.resume}" if analysis else "",
-                    )
-                    if x
-                ),
-                date=rdv.start,
-                nature=1,
-                duration_min=rdv.duree_min,
-                opportunity_id=opp_id,
-                is_done=False,
-            )
-            result["rdv_event_id"] = _id(ev)
-        except AxonautError as exc:
-            fail("événement de RDV", exc)
-        try:
-            due = max(today, _date_in_tz(rdv.start, tz) - timedelta(days=1))
-            task = await axonaut.create_task(
-                title=f"Préparer RDV {p.name}"[:255],
-                company_id=company_id,
-                description=(
-                    f"RDV le {_fmt_dt(rdv.start, tz)} ({rdv.duree_min} min){f' avec {rdv.avec}' if rdv.avec else ''}.\n"
-                    + (f"Besoin : {analysis.besoin}\n" if analysis and analysis.besoin else "")
-                    + f"Voir l'événement « Appel IA » du {_fmt_dt(call_date, tz)}."
-                ),
-                due=due,
-                priority="haute",
-            )
-            result["task_ids"].append(_id(task))
-        except AxonautError as exc:
-            fail("tâche de préparation du RDV", exc)
+        # Le RDV est posé dans Google Agenda (avp.agenda.sync_agenda), synchronisé avec Axonaut :
+        # rien à écrire dans l'agenda Axonaut. L'événement « Appel IA » ci-dessus le mentionne.
+        pass
 
     elif outcome is CallOutcome.RAPPEL or st.callback is not None:
         cb = st.callback
@@ -635,6 +596,29 @@ async def sync_axonaut(
             result["task_ids"].append(_id(task))
         except AxonautError as exc:
             fail("tâche de relance", exc)
+
+    # 4) Échéance lointaine (fin de contrat, décision dans 1 ou 2 ans) : tâche de relance anticipée
+    if analysis and analysis.date_decision and analysis.date_decision > today + timedelta(days=30):
+        due = max(today + timedelta(days=7),
+                  analysis.date_decision - timedelta(days=mapping.relance_avant_echeance_jours))
+        objet = analysis.objet_decision or "échéance"
+        try:
+            task = await axonaut.create_task(
+                title=f"Relance échéance : {objet} — {p.name}"[:255],
+                company_id=company_id,
+                description=(
+                    f"Échéance mentionnée lors de l'appel IA du {_fmt_dt(call_date, tz)} : "
+                    f"{objet}, le {analysis.date_decision.strftime('%d/%m/%Y')}.\n"
+                    f"Relance prévue {mapping.relance_avant_echeance_jours} jours avant.\n"
+                    f"Résumé : {analysis.resume}"
+                ),
+                due=due,
+                priority="normale",
+            )
+            result["task_ids"].append(_id(task))
+            result["echeance"] = analysis.date_decision.isoformat()
+        except AxonautError as exc:
+            fail("tâche d'échéance", exc)
 
     return result
 
@@ -746,6 +730,15 @@ async def process_call(
         if own_axonaut and client is not None:
             await client.aclose()
 
+    # Google Agenda : RDV pris pendant l'appel (direct ou à confirmer par JB)
+    if record.state.rdv is not None and not record.metadata.test_mode:
+        try:
+            agenda = await _sync_agenda(record, analysis, campaign, settings)
+            sync["agenda"] = agenda
+        except Exception as exc:  # noqa: BLE001
+            log.exception("agenda %s en échec", call_id)
+            sync.setdefault("erreurs", []).append(f"Google Agenda : {exc}")
+
     errors = sync.get("erreurs") or []
     synced = "skipped" not in sync and not errors and not getattr(client, "dry_run", False)
     fields: dict[str, Any] = {
@@ -762,6 +755,16 @@ async def process_call(
     log.info("post-appel %s : issue=%s score=%s axonaut=%s", call_id, outcome.value,
              analysis.score if analysis else "-", sync)
     return analysis
+
+
+async def _sync_agenda(record: CallRecordFile, analysis: CallAnalysis | None, campaign: Campaign,
+                       settings: Settings) -> dict:
+    from .agenda import GoogleClient, sync_agenda
+
+    if not settings.google_enabled:
+        return {"skipped": "Google Agenda non configuré (avp google auth)"}
+    async with GoogleClient(settings) as g:
+        return await sync_agenda(record, analysis, campaign, google=g, settings=settings)
 
 
 async def process_pending(
