@@ -288,6 +288,7 @@ def context_section(
     attempt: int,
     rdv_slots: Sequence[datetime],
     timezone: str,
+    transfer_available: bool = False,
 ) -> str:
     lines = [
         "# Contexte de l'appel",
@@ -302,6 +303,13 @@ def context_section(
         lines.append(f"Phrase d'ouverture déjà prononcée au décroché : « {opening_line(campaign, prospect)} »")
 
     if role == "decideur":
+        if transfer_available:
+            lines.append(f"Transfert vers {HUMAN_NAME} : disponible, seulement si la personne le demande ou l'accepte.")
+        else:
+            lines.append(
+                f"Transfert vers un humain : indisponible ({HUMAN_FIRST_NAME} est en intervention). "
+                "Ne le proposez jamais ; proposez un rendez-vous ou un rappel."
+            )
         slots = sorted(rdv_slots)
         if slots:
             lines.append(
@@ -343,8 +351,14 @@ def build_instructions(
     rdv_slots: Sequence[datetime] = (),
     prompts_dir: Path | None = None,
     timezone: str = "Europe/Paris",
+    transfer_available: bool | None = None,
 ) -> str:
-    """Assemble les instructions système d'un rôle : base + rôle + campagne + fiche + contexte."""
+    """Assemble les instructions système d'un rôle : base + rôle + campagne + fiche + contexte.
+
+    `transfer_available` : None = déduit de `TRANSFER_TARGET` (vide = transfert désactivé).
+    """
+    if transfer_available is None:
+        transfer_available = bool(get_settings().transfer_target)
     if role not in ROLE_FILES:
         raise ValueError(f"rôle inconnu : {role!r} (attendu : {', '.join(ROLES)})")
     directory = _prompts_dir(prompts_dir)
@@ -357,7 +371,8 @@ def build_instructions(
         campaign_section(campaign),
         prospect_section(prospect),
         context_section(
-            role, campaign, prospect, now=now, attempt=attempt, rdv_slots=rdv_slots, timezone=timezone
+            role, campaign, prospect, now=now, attempt=attempt, rdv_slots=rdv_slots, timezone=timezone,
+            transfer_available=transfer_available,
         ),
     ]
     return "\n\n---\n\n".join(p for p in parts if p.strip()) + "\n"

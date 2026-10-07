@@ -80,6 +80,7 @@ def _instructions(ud: CallUserData, role: str) -> str:
         rdv_slots=ud.meta.rdv_slots,
         prompts_dir=ud.settings.prompts_dir,
         timezone=ud.settings.timezone,
+        transfer_available=bool(ud.settings.transfer_target),
     )
 
 
@@ -188,6 +189,12 @@ class AgentAccueil(_BaseProspectAgent):
 
 class AgentDecideur(_BaseProspectAgent):
     role = "decideur"
+
+    def __init__(self, ud: CallUserData, **kwargs) -> None:
+        super().__init__(ud, **kwargs)
+        if not ud.settings.transfer_target:
+            # Transfert désactivé (TRANSFER_TARGET vide) : l'outil n'est même pas proposé à Claude.
+            self._tools = [t for t in self._tools if getattr(t, "id", "") != "transferer_a_un_humain"]
 
     async def on_enter(self) -> None:
         await super().on_enter()

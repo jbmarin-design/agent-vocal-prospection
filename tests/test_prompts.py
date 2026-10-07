@@ -100,3 +100,14 @@ def test_prompt_version_stable_et_sensible(tmp_path, ehpad):
         (CAMPAIGNS_DIR / "ehpad.yaml").read_text(encoding="utf-8") + "\n# modif\n", encoding="utf-8"
     )
     assert prompts.prompt_version(ehpad, pdir, cdir) != v2
+
+
+def test_transfert_indique_dans_le_contexte(ehpad, prospect):
+    sans = prompts.build_instructions(
+        "decideur", ehpad, prospect, now=NOW, prompts_dir=PROMPTS_DIR, transfer_available=False
+    )
+    avec = prompts.build_instructions(
+        "decideur", ehpad, prospect, now=NOW, prompts_dir=PROMPTS_DIR, transfer_available=True
+    )
+    assert "Transfert vers un humain : indisponible" in sans
+    assert "Transfert vers Jean-Baptiste Marin : disponible" in avec
