@@ -189,13 +189,15 @@ avp trunk list
 
 ### 1.9 Configurer le XiVO
 
-**Faire** : suivre **`xivo/README.md`** dans l'ordre :
-1. créer le contexte `from-livekit` ;
-2. créer le trunk statique `livekit` (chan_sip § 2.2 ou PJSIP § 2.3) ;
-3. installer `xivo/extensions_livekit.conf` dans `/etc/asterisk/extensions_extra.d/`, en adaptant la section `[avp-config]` (numéro présenté, trunk opérateur) ;
+**Faire** : en **mode natif** (`xivo/README.md` § 0), c'est le XiVO qui route, présente le numéro, enregistre et transfère :
+1. créer le trunk PJSIP `livekit`, identifié par l'IP de la VM (§ 2.3) ;
+2. l'affecter à un contexte qui a accès aux appels sortants et aux postes internes ;
+3. vérifier que la règle d'appel sortant de ce contexte accepte les numéros au format `+33…`, et y régler le numéro présenté et l'enregistrement ;
 4. tester le trunk depuis le XiVO, sans l'agent (§ 4).
 
-**Vérifier** : `asterisk -rx 'sip show peer livekit'` (ou `pjsip show endpoint livekit`) indique que le pair est joignable.
+Le dialplan dédié `xivo/extensions_livekit.conf` est une option avancée, inutile en mode natif.
+
+**Vérifier** : `asterisk -rx 'pjsip show endpoint livekit'` indique que le pair est joignable.
 
 ### 1.10 Démarrer le tout et premier appel « écho »
 

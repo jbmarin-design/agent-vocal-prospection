@@ -2,7 +2,32 @@
 
 Ce document décrit la configuration du XiVO pour l'agent vocal. Il suppose que la VM agent vocal est installée (`deploy/install.sh`) et que `deploy/healthcheck.sh` est au vert.
 
-Fichiers fournis :
+## 0. Mode natif XiVO (recommandé)
+
+**Principe : l'agent est un simple client SIP du XiVO.** Il envoie un INVITE vers le numéro du prospect, et le XiVO fait tout le reste avec ses fonctions habituelles. Aucun dialplan personnalisé n'est nécessaire.
+
+| Fonction | Qui s'en charge |
+|---|---|
+| Routage vers l'opérateur | Le XiVO : règles d'appels sortants (outcall) |
+| Numéro présenté | Le XiVO : règle d'appel sortant. À défaut, le `From` envoyé par LiveKit (`SIP_CALLER_NUMBER`) |
+| Enregistrement | Le XiVO : option d'enregistrement de la règle d'appel sortant |
+| Transfert vers un poste | Le XiVO : il reçoit le REFER de l'agent et route l'appel comme n'importe quel transfert |
+| Format des numéros | Le XiVO : préfixes et règles de la règle d'appel sortant. L'agent envoie du E.164 (`+33…`) |
+
+**Côté XiVO, trois réglages :**
+
+1. **Trunk `livekit`** (PJSIP, § 2.3) : identification par l'IP de la VM, codecs `alaw,ulaw`, `direct_media=no`, transfert autorisé.
+2. **Contexte du trunk** : un contexte qui donne accès aux appels sortants **et** aux postes internes pour le transfert. Par exemple le contexte des utilisateurs, ou un contexte dédié `agent-vocal` qui inclut le contexte des postes et celui des sorties.
+3. **Règle d'appel sortant** utilisée par ce contexte : opérateur, numéro présenté (`05 87 14 05 00`) et enregistrement si tu le souhaites. Elle doit accepter le format `+33XXXXXXXXX`, ou le réécrire.
+
+**Côté VM, quatre informations seulement :** `XIVO_SIP_ADDRESS` (IP du XiVO), `SIP_CALLER_NUMBER` (numéro présenté), `TRANSFER_TARGET` (`sip:<poste>@<IP XiVO>`), et les numéros à appeler, qui viennent des campagnes.
+
+**Traçabilité (facultatif)** : chaque INVITE porte l'en-tête `X-AVP-Call-ID: <identifiant d'appel>`. Pour retrouver un appel du XiVO dans `avp calls show`, il suffit de recopier cet en-tête dans le CDR, par exemple avec un sous-programme de pré-traitement sur le contexte du trunk :
+`Set(CDR(userfield)=avp:${PJSIP_HEADER(read,X-AVP-Call-ID)})`
+
+> Les sections 1 et 3 décrivent une **option avancée** : un dialplan dédié (`extensions_livekit.conf`) qui force le numéro présenté, filtre les destinations et enregistre avec MixMonitor. Elle n'est utile que si l'on ne veut pas passer par les règles d'appels sortants du XiVO. En mode natif, on ne fait que le § 2.3 (trunk PJSIP), avec le contexte choisi ci-dessus à la place de `from-livekit`.
+
+Fichiers fournis (option avancée) :
 
 | Fichier | Destination sur le XiVO | Rôle |
 |---|---|---|
