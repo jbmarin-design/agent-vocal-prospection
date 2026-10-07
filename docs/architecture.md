@@ -14,6 +14,8 @@ Contraintes : **100 % maîtrisé et auto-hébergé** pour la partie transport et
 
 ## 2. Vue d'ensemble
 
+> Version lisible et à jour de ces schémas : [`schemas.md`](schemas.md).
+
 ```
                          ┌──────────────────────── VM « agent vocal » (Debian 12 + Docker) ─────────────────────────┐
                          │                                                                                        │
@@ -164,7 +166,7 @@ agent-vocal-prospection/
 │   ├── orchestrator/         Import, planificateur, opposition, rapports
 │   └── cli.py                Commande `avp`
 ├── tests/                    Tests unitaires (pytest)
-├── docs/                     Architecture (+ schema-architecture.svg), installation, XiVO, prompts,
+├── docs/                     Architecture, schémas (schemas.md), installation, XiVO, prompts,
 │                             Axonaut, exploitation, développement, légal, protocoles de test
 └── data/                     Base SQLite, transcriptions, rapports (non versionné)
 ```

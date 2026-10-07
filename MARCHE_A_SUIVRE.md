@@ -8,7 +8,7 @@ Ce guide se déroule **dans l'ordre**. Chaque étape a la même forme :
 
 On ne passe pas à une phase tant que la précédente n'est pas validée et consignée dans `docs/journal-tests.md`.
 
-> Comprendre avant d'installer : lire `docs/architecture.md` (10 minutes) et regarder `docs/schema-architecture.svg`.
+> Comprendre avant d'installer : regarder les schémas de `docs/schemas.md` (5 minutes), puis lire `docs/architecture.md`.
 
 ## Vue d'ensemble
 

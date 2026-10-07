@@ -9,7 +9,51 @@ Un agent vocal IA qui **passe lui-même des appels de prospection B2B** depuis l
 
 Le transport audio et l'orchestration sont **auto-hébergés et open source** (LiveKit). Seules les briques d'IA sont appelées en API : Deepgram pour l'écoute, Claude pour le raisonnement, Cartesia pour la voix.
 
-![Architecture](docs/schema-architecture.svg)
+```mermaid
+flowchart LR
+  subgraph TEL["Téléphonie existante"]
+    P["Prospect<br/>standard, IDEC, directeur"]
+    OP["Opérateur<br/>Sewan"]
+    X["XiVO 10.64.0.5<br/>trunk livekit<br/>contexte livekit<br/>règles d'appels sortants<br/>enregistrement"]
+  end
+  subgraph VM["VM agent vocal 10.64.0.11 (Docker)"]
+    SIP["livekit-sip<br/>SIP 5060 / RTP 10000-20000"]
+    LK["livekit-server<br/>1 appel = 1 room"]
+    R[("redis")]
+    W["agent-worker<br/>accueil puis décideur"]
+    O["orchestrator<br/>commande avp<br/>planificateur, post-appel"]
+    DB[("SQLite<br/>prospects, appels,<br/>transcriptions")]
+  end
+  subgraph IA["Services IA (API)"]
+    DG["Deepgram<br/>écoute"]
+    HK["Claude Haiku<br/>conversation"]
+    CT["Cartesia<br/>voix"]
+    SN["Claude Sonnet<br/>analyse et score"]
+  end
+  subgraph BIZ["Outils OpteoLink"]
+    AX["Axonaut<br/>prospects, opportunités,<br/>tâches"]
+    GA["Google Agenda<br/>créneaux libres, RDV"]
+    GM["Gmail<br/>RDV à confirmer"]
+  end
+  P <--> OP <--> X
+  X <-->|"SIP + audio"| SIP
+  SIP <--> R <--> LK
+  LK <-->|"audio"| W
+  W --> DG
+  W --> HK
+  W --> CT
+  O -->|"lance l'appel"| LK
+  W -->|"fin d'appel"| DB
+  O <--> DB
+  O --> SN
+  AX -->|"prospects à appeler"| O
+  O -->|"compte rendu, étape, rappels"| AX
+  GA -->|"disponibilités"| O
+  O -->|"RDV"| GA
+  O --> GM
+```
+
+Tous les schémas (déroulé d'un appel, conversation, après l'appel, réseau) : [`docs/schemas.md`](docs/schemas.md).
 
 ## Comment ça marche, en 30 secondes
 
@@ -27,7 +71,7 @@ Le comportement commercial vit dans des **fichiers texte** : `prompts/*.md` et `
 
 | Je veux… | Lire |
 |---|---|
-| Comprendre l'architecture | [`docs/architecture.md`](docs/architecture.md) |
+| Comprendre l'architecture | [`docs/schemas.md`](docs/schemas.md), puis [`docs/architecture.md`](docs/architecture.md) |
 | **Installer pas à pas** | [`MARCHE_A_SUIVRE.md`](MARCHE_A_SUIVRE.md) |
 | Détails d'installation et dépannage réseau | [`docs/installation.md`](docs/installation.md) |
 | Configurer le XiVO | [`xivo/README.md`](xivo/README.md), [`docs/xivo-trunk.md`](docs/xivo-trunk.md) |

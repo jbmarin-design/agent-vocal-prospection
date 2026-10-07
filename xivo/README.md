@@ -17,7 +17,7 @@ Ce document décrit la configuration du XiVO pour l'agent vocal. Il suppose que 
 **Côté XiVO, trois réglages :**
 
 1. **Trunk `livekit`** (PJSIP, § 2.3) : identification par l'IP de la VM, codecs `alaw,ulaw`, `direct_media=no`, transfert autorisé.
-2. **Contexte du trunk** : un contexte qui donne accès aux appels sortants **et** aux postes internes pour le transfert. Par exemple le contexte des utilisateurs, ou un contexte dédié `agent-vocal` qui inclut le contexte des postes et celui des sorties.
+2. **Contexte du trunk** : un contexte qui donne accès aux appels sortants **et** aux postes internes pour le transfert. Chez OpteoLink : un contexte dédié **`livekit`**, qui inclut le contexte des postes internes et celui des appels sortants.
 3. **Règle d'appel sortant** utilisée par ce contexte : opérateur, numéro présenté (`05 87 14 05 00`) et enregistrement si tu le souhaites. Elle doit accepter le format `+33XXXXXXXXX`, ou le réécrire.
 
 **Côté VM, quatre informations seulement :** `XIVO_SIP_ADDRESS` (IP du XiVO), `SIP_CALLER_NUMBER` (numéro présenté), `TRANSFER_TARGET` (`sip:<poste>@<IP XiVO>`), et les numéros à appeler, qui viennent des campagnes.
