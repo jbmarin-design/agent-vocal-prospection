@@ -145,7 +145,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     # Clés et paramètres
     for key, label, required in (
         ("anthropic_api_key", "Clé Anthropic", True),
-        ("deepgram_api_key", "Clé Deepgram", True),
+        ("deepgram_api_key", "Clé Deepgram", s.stt_provider == "deepgram"),
         ("axonaut_api_key", "Clé Axonaut", False),
     ):
         (ok(label, "présente") if getattr(s, key) else (fail if required else warn)(label, f"{key.upper()} vide"))

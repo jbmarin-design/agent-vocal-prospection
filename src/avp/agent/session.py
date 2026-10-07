@@ -25,7 +25,16 @@ def load_vad() -> silero.VAD:
     return silero.VAD.load(min_silence_duration=0.45, activation_threshold=0.5)
 
 
-def build_stt(settings: Settings, campaign: Campaign) -> deepgram.STT:
+def build_stt(settings: Settings, campaign: Campaign) -> Any:
+    if settings.stt_provider == "cartesia":
+        # Transcription Cartesia (même compte et même facture que la voix). En français : ink-whisper.
+        model = settings.stt_model if settings.stt_model.startswith("ink") else "ink-whisper"
+        ckw: dict[str, Any] = {"model": model, "language": settings.stt_language}
+        if settings.cartesia_api_key:
+            ckw["api_key"] = settings.cartesia_api_key
+        if campaign.mots_cles_stt:
+            ckw["keyterm"] = list(campaign.mots_cles_stt)
+        return cartesia.STT(**ckw)
     kwargs: dict[str, Any] = {
         "model": settings.stt_model,
         "language": settings.stt_language,

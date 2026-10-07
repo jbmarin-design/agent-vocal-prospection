@@ -49,8 +49,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     llm_realtime_model: str = "claude-haiku-4-5-20251001"
     llm_analysis_model: str = "claude-sonnet-5-5"
+    stt_provider: Literal["deepgram", "cartesia"] = "deepgram"
     deepgram_api_key: str = ""
-    stt_model: str = "nova-3"
+    stt_model: str = Field(default="nova-3", description="Deepgram : nova-3 ; Cartesia : ink-whisper")
     stt_language: str = "fr"
     tts_provider: Literal["cartesia", "elevenlabs"] = "cartesia"
     cartesia_api_key: str = ""
