@@ -160,7 +160,7 @@ Le script est **rejouable** : en cas d'interruption, relance-le. Les secrets dé
 **Étape 4 : mises à jour ultérieures**
 
 ```bash
-cd /opt/agent-vocal-prospection && git pull
+sudo -u avp git -C /opt/agent-vocal-prospection pull   # le dépôt appartient à l'utilisateur avp
 cd deploy && sudo -u avp docker compose build && sudo -u avp docker compose up -d
 ```
 

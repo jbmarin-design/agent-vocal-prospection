@@ -86,7 +86,7 @@ sqlite3 data/avp.db "SELECT name, status, attempts, next_attempt_at FROM prospec
 5. Merge dans `main`, puis déploiement :
 
 ```bash
-cd /opt/agent-vocal-prospection && git pull
+sudo -u avp git -C /opt/agent-vocal-prospection pull   # le dépôt appartient à l'utilisateur avp
 cd deploy && docker compose build && docker compose up -d
 ```
 
