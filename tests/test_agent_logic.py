@@ -214,3 +214,14 @@ def test_is_silent_pickup():
 )
 def test_looks_like_voicemail(text, expected):
     assert logic.looks_like_voicemail(text) is expected
+
+
+def test_format_latency():
+    assert logic.format_latency("user", {"end_of_turn_delay": 0.42, "transcription_delay": 0.1}) == (
+        "fin de tour 0.42 s, transcription 0.10 s"
+    )
+    assert logic.format_latency("assistant", {"llm_node_ttft": 0.6, "tts_node_ttfb": 0.15}) == (
+        "1er mot LLM 0.60 s, 1er son TTS 0.15 s"
+    )
+    assert logic.format_latency("assistant", {}) is None
+    assert logic.format_latency("system", {"llm_node_ttft": 1.0}) is None

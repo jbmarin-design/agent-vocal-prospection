@@ -63,6 +63,24 @@ async def hang_up(ud: CallUserData, reason: str, *, wait_s: float = 0.0) -> None
         job.shutdown(reason=reason)
 
 
+async def _ensure_reply(session, *, delay_s: float = 1.2) -> None:
+    """Filet de sécurité des outils « silencieux » (qui ne relancent pas Claude).
+
+    Si Claude a appelé l'outil sans rien dire, l'agent resterait muet : après un court délai,
+    si l'agent écoute et que le dernier message de l'historique est encore celui du prospect,
+    on demande une réponse.
+    """
+    await asyncio.sleep(delay_s)
+    try:
+        if session.agent_state != "listening" or session.user_state == "speaking":
+            return
+        msgs = [i for i in session.history.items if getattr(i, "type", "") == "message"]
+        if msgs and msgs[-1].role == "user":
+            session.generate_reply()
+    except Exception:
+        logger.debug("vérification de réponse impossible", exc_info=True)
+
+
 async def _hang_up_after_playout(context: RunContext[CallUserData], reason: str) -> None:
     try:
         await context.wait_for_playout()
@@ -225,8 +243,9 @@ class AgentDecideur(_BaseProspectAgent):
         )
 
     @function_tool
-    async def enregistrer_reponse(self, context: RunContext[CallUserData], question_id: str, reponse: str) -> str:
-        """Enregistre la réponse à une question de qualification de la campagne.
+    async def enregistrer_reponse(self, context: RunContext[CallUserData], question_id: str, reponse: str) -> None:
+        """Note une information de qualification donnée par l'interlocuteur. Outil silencieux :
+        appelez-le dans la même réponse que votre phrase, jamais seul. Ne vous arrêtez pas pour lui.
 
         Args:
             question_id: L'identifiant de la question, tel qu'indiqué entre crochets dans la campagne.
@@ -238,8 +257,9 @@ class AgentDecideur(_BaseProspectAgent):
         if qid not in valid:
             raise ToolError(f"Identifiant inconnu. Identifiants valides : {', '.join(sorted(valid))}")
         ud.state.answers[qid] = reponse.strip()
-        remaining = [q.id for q in ud.campaign.qualification if q.id not in ud.state.answers]
-        return "Noté." + (f" Questions restantes : {', '.join(remaining)}." if remaining else " Toutes les questions sont posées.")
+        # Rien en retour : pas de second aller-retour vers Claude, donc pas de latence ajoutée.
+        _spawn(_ensure_reply(context.session))
+        return None
 
     @function_tool
     async def proposer_creneaux(self, context: RunContext[CallUserData]) -> str:

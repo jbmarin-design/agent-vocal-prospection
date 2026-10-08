@@ -401,3 +401,29 @@ def dump_usage(summary: Any) -> dict[str, Any]:
         return json.loads(json.dumps(summary.__dict__, default=str))
     except Exception:
         return {"brut": str(summary)}
+
+
+# ---------------------------------------------------------------------------
+# Mesure de la latence (journal du worker)
+# ---------------------------------------------------------------------------
+
+_LATENCY_FIELDS: dict[str, tuple[tuple[str, str], ...]] = {
+    "user": (("end_of_turn_delay", "fin de tour"), ("transcription_delay", "transcription")),
+    "assistant": (("llm_node_ttft", "1er mot LLM"), ("tts_node_ttfb", "1er son TTS")),
+}
+
+
+def format_latency(role: str, metrics: Mapping[str, Any] | None) -> str | None:
+    """Résumé lisible des délais d'un tour (``ChatMessage.metrics`` de LiveKit), ou None.
+
+    Côté prospect : délai de décision de fin de tour et de transcription.
+    Côté agent : délai du premier mot de Claude et du premier son de la voix.
+    """
+    if not metrics:
+        return None
+    parts = [
+        f"{label} {float(metrics[key]):.2f} s"
+        for key, label in _LATENCY_FIELDS.get(role, ())
+        if isinstance(metrics.get(key), int | float)
+    ]
+    return ", ".join(parts) or None

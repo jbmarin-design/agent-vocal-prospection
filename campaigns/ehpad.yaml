@@ -59,7 +59,7 @@ qualification:
   - id: satisfaction
     question: "Êtes-vous satisfait de votre téléphonie et de votre internet ? Des coupures, des pannes, des délais d'intervention ?"
     but: "Irritants techniques : coupures, pannes, qualité, réactivité du prestataire."
-    obligatoire: true
+    obligatoire: false
   - id: couts
     question: "Et côté factures, avez-vous le sentiment de payer le juste prix, ou les coûts ont-ils augmenté ces dernières années ?"
     but: "Ressenti sur les coûts télécom, hausses, factures difficiles à lire. Ne pas demander de montant précis."
@@ -67,7 +67,7 @@ qualification:
   - id: interconnexions
     question: "Votre téléphonie est-elle reliée à d'autres systèmes, par exemple l'appel malade, l'antifugue, l'interphone ou les alarmes techniques ?"
     but: "Interconnexions existantes avec d'autres systèmes, et si elles fonctionnent bien. S'il n'y en a pas, le noter."
-    obligatoire: true
+    obligatoire: false
   - id: echeance
     question: "Savez-vous quand se terminent vos contrats ou vos engagements actuels avec vos opérateurs ?"
     but: "Échéance des contrats, durée d'engagement restante, projet de changement."

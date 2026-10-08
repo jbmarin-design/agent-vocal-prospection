@@ -85,6 +85,12 @@ class Settings(BaseSettings):
     max_concurrent_calls: int = 2
     amd_silence_s: float = Field(default=2.5, description="Silence au décroché avant de dire « Allô ? » (s)")
     presence_wait_s: float = Field(default=4.0, description="Attente d'une réponse après chaque « Allô ? » (s)")
+    endpointing_min_delay: float = Field(
+        default=0.3, ge=0.1, le=2.0, description="Délai mini après la fin de parole avant que l'agent réponde (s)"
+    )
+    endpointing_max_delay: float = Field(
+        default=2.0, ge=0.5, le=6.0, description="Délai maxi si la phrase semble inachevée (s)"
+    )
     dry_run: bool = Field(default=False, description="Si vrai : aucun appel réel, aucune écriture Axonaut")
 
     # --- Chemins dérivés ---------------------------------------------------------

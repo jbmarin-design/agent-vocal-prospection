@@ -43,6 +43,7 @@ from .logic import (
     console_metadata,
     dump_usage,
     finalize_call,
+    format_latency,
     history_to_transcript,
     is_silent_pickup,
     looks_like_voicemail,
@@ -178,6 +179,14 @@ async def entrypoint(ctx: JobContext) -> None:
             ud.note("silence prolongé")
             session.say("Je n'ai plus de réponse, je vais raccrocher. Bonne journée.", allow_interruptions=False)
             tasks.append(asyncio.create_task(hang_up(ud, "silence prolongé", wait_s=4.0)))
+
+    @session.on("conversation_item_added")
+    def _on_item(ev) -> None:
+        # Latence par tour, dans les logs : `docker compose logs agent-worker | grep latence`
+        item = getattr(ev, "item", None)
+        summary = format_latency(getattr(item, "role", ""), getattr(item, "metrics", None))
+        if summary:
+            logger.info("latence %s : %s", "prospect" if item.role == "user" else "agent", summary)
 
     @session.on("close")
     def _on_close(ev) -> None:

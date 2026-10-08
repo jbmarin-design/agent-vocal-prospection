@@ -22,7 +22,9 @@ logger = logging.getLogger("avp.agent.session")
 
 def load_vad() -> silero.VAD:
     """Chargé une fois par processus (prewarm), puis réutilisé par chaque appel."""
-    return silero.VAD.load(min_silence_duration=0.45, activation_threshold=0.5)
+    # 0,35 s de silence suffit à clore un segment de parole ; le détecteur de fin de tour
+    # (MultilingualModel) évite ensuite de couper la parole sur une simple pause.
+    return silero.VAD.load(min_silence_duration=0.35, activation_threshold=0.5)
 
 
 def build_stt(settings: Settings, campaign: Campaign) -> Any:
@@ -52,7 +54,7 @@ def build_llm(settings: Settings) -> anthropic.LLM:
         model=settings.llm_realtime_model,
         api_key=settings.anthropic_api_key or None,
         temperature=0.4,
-        max_tokens=300,
+        max_tokens=200,  # réponses courtes : moins de texte = voix plus tôt
         caching="ephemeral",
     )
 
@@ -86,8 +88,8 @@ def build_session(ud: CallUserData, *, vad: silero.VAD | None = None) -> AgentSe
         vad=vad or load_vad(),
         turn_handling={
             "turn_detection": MultilingualModel(),
-            # Au téléphone : on laisse finir les phrases, on évite de couper la parole.
-            "endpointing": {"min_delay": 0.5, "max_delay": 3.0},
+            # Réactivité réglable dans le .env (ENDPOINTING_MIN_DELAY / ENDPOINTING_MAX_DELAY).
+            "endpointing": {"min_delay": s.endpointing_min_delay, "max_delay": s.endpointing_max_delay},
             "interruption": {"resume_false_interruption": True, "false_interruption_timeout": 1.0},
             "preemptive_generation": {"enabled": True},
         },
