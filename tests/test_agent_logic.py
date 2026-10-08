@@ -190,3 +190,11 @@ def test_finalize_console_sans_base(tmp_path, make_campaign):
     ud = logic.CallUserData(meta=meta, campaign=make_campaign(), settings=settings, console=True)
     path = logic.finalize_call(ud, [])
     assert path.exists() and not settings.db_path.exists()
+
+
+def test_is_silent_pickup():
+    assert logic.is_silent_pickup("uncertain", "no_speech_timeout", "")
+    assert logic.is_silent_pickup("uncertain", "detection_timeout", "  ")
+    assert not logic.is_silent_pickup("uncertain", "llm", "Allô oui ?")
+    assert not logic.is_silent_pickup("human", "short_greeting", "")
+    assert logic.PRESENCE_PROMPTS[0] == "Allô ?"

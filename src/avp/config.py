@@ -83,6 +83,8 @@ class Settings(BaseSettings):
     ring_timeout_s: int = 40
     silence_timeout_s: int = 20
     max_concurrent_calls: int = 2
+    amd_silence_s: float = Field(default=2.5, description="Silence au décroché avant de dire « Allô ? » (s)")
+    presence_wait_s: float = Field(default=4.0, description="Attente d'une réponse après chaque « Allô ? » (s)")
     dry_run: bool = Field(default=False, description="Si vrai : aucun appel réel, aucune écriture Axonaut")
 
     # --- Chemins dérivés ---------------------------------------------------------

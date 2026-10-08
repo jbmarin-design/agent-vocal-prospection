@@ -37,12 +37,14 @@ from ..models import CallMetadata, CallOutcome
 from ..prompts import opening_line, prompt_version
 from .agents import AgentAccueil, AgentRepondeur, hang_up
 from .logic import (
+    PRESENCE_PROMPTS,
     CallUserData,
     classify_sip_failure,
     console_metadata,
     dump_usage,
     finalize_call,
     history_to_transcript,
+    is_silent_pickup,
     outcome_from_amd,
     should_leave_voicemail,
 )
@@ -90,6 +92,27 @@ async def _duration_guard(ud: CallUserData, session) -> None:
     if not ud.hangup_requested:
         ud.note("durée maximale atteinte")
         await hang_up(ud, "durée maximale")
+
+
+async def _probe_presence(ud: CallUserData, session) -> bool:
+    """Dit « Allô ? » (puis une relance) et attend que quelqu'un parle. Vrai si une voix répond.
+
+    La réponse (« Allô, oui ? ») est consommée par AgentAccueil.on_user_turn_completed sans
+    déclencher de réponse du LLM : c'est la phrase d'ouverture fixe qui suit.
+    """
+    for prompt in PRESENCE_PROMPTS:
+        ud.presence_event = asyncio.Event()
+        session.say(prompt, allow_interruptions=True, add_to_chat_ctx=False)
+        try:
+            await asyncio.wait_for(ud.presence_event.wait(), timeout=ud.settings.presence_wait_s)
+            return True
+        except TimeoutError:
+            continue
+        finally:
+            if ud.presence_event is not None and ud.presence_event.is_set():
+                ud.presence_event = None
+    ud.presence_event = None
+    return False
 
 
 @server.rtc_session(agent_name=get_settings().agent_name)
@@ -200,6 +223,9 @@ async def entrypoint(ctx: JobContext) -> None:
         participant_identity=identity,
         ivr_detection=False,  # un SVI = on raccroche (pas de navigation automatique)
         suppress_compatibility_warning=True,
+        # Silence au décroché : on n'attend que quelques secondes avant de dire « Allô ? »
+        # (par défaut LiveKit attend 10 s).
+        detection_options={"no_speech_threshold": settings.amd_silence_s},
     ) as detector:
         try:
             await ctx.api.sip.create_sip_participant(
@@ -239,12 +265,22 @@ async def entrypoint(ctx: JobContext) -> None:
         result = await detector.execute()
 
     # 4. Résultat AMD -------------------------------------------------------------
-    category = str(getattr(result, "category", "uncertain"))
+    raw_category = getattr(result, "category", "uncertain")
+    # AMDCategory est un (str, Enum) : str() donnerait « AMDCategory.HUMAN », on prend la valeur.
+    category = str(getattr(raw_category, "value", raw_category))
+    reason = str(getattr(result, "reason", ""))
     ud.state.amd_result = category
-    logger.info("AMD : %s", category)
+    logger.info("AMD : %s (%s)", category, reason)
     amd_outcome = outcome_from_amd(category)
 
     if amd_outcome is None:  # humain ou incertain
+        if is_silent_pickup(category, reason, str(getattr(result, "transcript", ""))):
+            # Décroché silencieux : « Allô ? » avant la phrase d'ouverture, pour vérifier la présence.
+            if not await _probe_presence(ud, session):
+                ud.state.outcome = CallOutcome.NON_DECROCHE
+                ud.note("ligne silencieuse : aucune réponse aux « Allô ? »")
+                await hang_up(ud, "ligne silencieuse", wait_s=0.5)
+                return
         session.say(opening_line(campaign, meta.prospect), allow_interruptions=False)
         return  # la conversation se déroule ; la fin passe par les outils ou les garde-fous
 

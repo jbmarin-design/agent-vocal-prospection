@@ -11,6 +11,7 @@ Contient :
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from collections.abc import Iterable, Mapping, Sequence
@@ -69,6 +70,8 @@ class CallUserData:
     hangup_requested: bool = False
     finalized: bool = False
     usage: dict[str, Any] = field(default_factory=dict)
+    # Pendant le « Allô ? » : levé dès que l'interlocuteur parle (voir worker._probe_presence).
+    presence_event: asyncio.Event | None = None
 
     @property
     def prospect(self) -> Prospect:
@@ -111,6 +114,14 @@ def outcome_from_amd(category: str) -> CallOutcome | None:
         "machine-ivr": CallOutcome.SVI,
         "machine-unavailable": CallOutcome.NON_DECROCHE,
     }.get(category)
+
+
+PRESENCE_PROMPTS: tuple[str, ...] = ("Allô ?", "Allô, vous m'entendez ?")
+
+
+def is_silent_pickup(category: str, reason: str, transcript: str) -> bool:
+    """Vrai si l'appel a été décroché mais que personne n'a parlé pendant la détection."""
+    return category == "uncertain" and (reason == "no_speech_timeout" or not transcript.strip())
 
 
 def should_leave_voicemail(campaign: Campaign) -> bool:

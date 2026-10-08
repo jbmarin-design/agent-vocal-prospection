@@ -17,7 +17,7 @@ import logging
 from datetime import UTC, datetime
 
 from livekit import api
-from livekit.agents import Agent, RunContext, ToolError, function_tool, get_job_context
+from livekit.agents import Agent, RunContext, StopResponse, ToolError, function_tool, get_job_context
 
 from ..livekit_admin import participant_identity_for
 from ..models import Callback, CallOutcome, Rdv
@@ -142,6 +142,14 @@ class _BaseProspectAgent(Agent):
 
 class AgentAccueil(_BaseProspectAgent):
     role = "accueil"
+
+    async def on_user_turn_completed(self, turn_ctx, new_message) -> None:
+        # Réponse au « Allô ? » de vérification : on la note, sans réponse du LLM
+        # (le worker enchaîne avec la phrase d'ouverture fixe).
+        ev = self._ud.presence_event
+        if ev is not None and not ev.is_set():
+            ev.set()
+            raise StopResponse()
 
     @function_tool
     async def passer_au_decideur(
