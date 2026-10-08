@@ -48,11 +48,11 @@ Le score mesure **l'intérêt commercial du prospect** (pas la qualité de l'app
 
 Évalue **la conduite de l'agent IA**, indépendamment du résultat :
 
-- **5** : annonce IA + enregistrement claire dès la première phrase, écoute active, phrases courtes, questions de qualification posées naturellement, objections bien traitées, conclusion nette (RDV, rappel ou sortie polie).
+- **5** : annonce « assistante virtuelle » + enregistrement claire dès la première phrase, écoute active, phrases courtes, questions de qualification posées naturellement, objections bien traitées, conclusion nette (RDV, rappel ou sortie polie).
 - **4** : bon appel avec une maladresse mineure.
 - **3** : correct mais mécanique, ou une question importante oubliée, ou une objection traitée de façon générique.
 - **2** : erreurs gênantes : coupe la parole, répète, ne répond pas à la question posée, insiste après un refus, phrases trop longues.
-- **1** : faute grave : annonce IA ou enregistrement absente, prix ou promesse donnés, mensonge, refus ou opposition non respectés, propos incohérents.
+- **1** : faute grave : annonce d'assistante virtuelle ou de l'enregistrement absente, ou nature d'IA niée quand on la demande, prix ou promesse donnés, mensonge, refus ou opposition non respectés, propos incohérents.
 
 Toute faute grave (annonce manquante, prix cité, refus non respecté) doit aussi apparaître en tête des `suggestions_script`.
 

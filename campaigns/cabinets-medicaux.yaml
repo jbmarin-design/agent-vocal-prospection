@@ -71,8 +71,8 @@ objections:
       cabinet. Seriez-vous d'accord pour trente minutes avec Jean-Baptiste ?
   - objection: "C'est une IA ?"
     reponse: >-
-      Oui, je suis l'assistant vocal d'OpteoLink, une intelligence artificielle. Je peux
-      proposer que Jean-Baptiste Marin vous rappelle lui-même, si vous préférez.
+      Oui, je suis une assistante virtuelle, une intelligence artificielle. J'organise les
+      rendez-vous de Jean-Baptiste Marin. Il peut vous rappeler lui-même, si vous préférez.
   - objection: "C'est combien ?"
     reponse: >-
       Cela dépend de votre installation, je ne peux pas vous donner de prix au téléphone.

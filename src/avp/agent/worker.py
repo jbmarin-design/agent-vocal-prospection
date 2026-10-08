@@ -13,7 +13,7 @@ Déroulé d'un appel :
   1. lecture des métadonnées, chargement de la campagne, construction de la session ;
   2. démarrage de la session avec AgentAccueil (muet) ;
   3. AMD démarré AVANT la numérotation, puis create_sip_participant(wait_until_answered) ;
-  4. humain → phrase d'ouverture fixe (annonce IA + enregistrement) ; répondeur → message ou raccrochage ;
+  4. humain → phrase d'ouverture fixe (assistante virtuelle + enregistrement) ; répondeur → message ou raccrochage ;
   5. conversation (accueil → décideur), garde-fous durée et silence ;
   6. fin : transcription + état écrits dans data/transcripts, base mise à jour, room supprimée.
 """

@@ -47,14 +47,14 @@ def test_format_slot_fr():
 
 def test_opening_line_annonce_ia_et_enregistrement(ehpad, prospect):
     line = prompts.opening_line(ehpad, prospect)
-    assert "intelligence artificielle" in line and "enregistré" in line
+    assert "assistante commerciale virtuelle" in line and "enregistré" in line
     assert "directeur" in line
 
 
 def test_opening_line_test(prospect):
     echo = load_campaign("echo", CAMPAIGNS_DIR)
     line = prompts.opening_line(echo, prospect)
-    assert "test technique" in line and "intelligence artificielle" in line
+    assert "test technique" in line and "virtuelle" in line
 
 
 @pytest.mark.parametrize("role", ["accueil", "decideur", "repondeur"])
@@ -66,7 +66,7 @@ def test_build_instructions_couches(role, ehpad, prospect):
     assert "{{" not in text, "marqueur non remplacé"
     assert "Règles non négociables" in text  # base.md
     assert "EHPAD Les Tilleuls" in text and "Auch" in text  # fiche
-    assert "[appel_malade_systeme]" in text  # questions de la campagne
+    assert "[operateurs]" in text  # questions de la campagne
     assert "lundi 5 octobre 2026 à 10 h 32" in text  # contexte
     assert "Tentative d'appel n° 2" in text
     if role == "decideur":

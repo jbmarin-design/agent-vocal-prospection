@@ -13,8 +13,8 @@ Les fichiers ``.md`` peuvent contenir des marqueurs ``{{variable}}`` simples, re
 (pas de moteur de template externe). Variables disponibles : voir ``template_variables``.
 
 La phrase d'ouverture (``opening_line``) est **fixe** et dite mot pour mot par le worker
-(``session.say``) dès qu'un humain décroche : annonce de l'IA et de l'enregistrement
-(AI Act art. 50, RGPD). Elle n'est pas modifiable par une campagne.
+(``session.say``) dès qu'un humain décroche : annonce d'une assistante **virtuelle** (donc non
+humaine) et de l'enregistrement (AI Act art. 50, RGPD). Elle n'est pas modifiable par une campagne.
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ TEST_CAMPAIGN_PREFIXES: tuple[str, ...] = ("echo",)
 
 # Gabarits de la phrase d'ouverture (inclus dans la version des prompts).
 OPENING_DISCLOSURE = (
-    "Bonjour, ici l'assistant vocal d'OpteoLink, une intelligence artificielle. "
+    "Bonjour, ici l'assistante commerciale virtuelle d'OpteoLink. "
     "Cet appel est enregistré pour notre suivi commercial."
 )
 OPENING_ASK = "Pourrais-je parler {cible}, s'il vous plaît ?"
@@ -152,7 +152,7 @@ def is_test_campaign(campaign: Campaign) -> bool:
 def opening_line(campaign: Campaign, prospect: Prospect) -> str:
     """Phrase d'ouverture FIXE, dite mot pour mot dès le décroché d'un humain.
 
-    Salutation, « assistant vocal d'OpteoLink, une intelligence artificielle », appel enregistré,
+    Salutation, « assistante commerciale virtuelle d'OpteoLink », appel enregistré,
     puis demande de l'interlocuteur cible (le contact connu s'il y en a un). Pour une campagne de
     test technique (id « echo… »), annonce le test au lieu de demander quelqu'un.
     """
