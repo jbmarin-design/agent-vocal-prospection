@@ -17,23 +17,24 @@ cible:
 
 offre:
   resume: >-
-    OpteoLink propose aux EHPAD un audit financier et technique gratuit et sans engagement
+    OpteoLink propose aux EHPAD un audit technique et financier gratuit et sans engagement
     de leurs télécoms : téléphonie et standard, téléphones DECT des soignants, internet et
-    fibre, forfaits mobiles, et remontée des alarmes d'appel malade et d'antifugue sur les
-    téléphones. La démarche est simple : un premier échange de trente minutes avec
-    Jean-Baptiste Marin, l'établissement transmet ses dernières factures télécom, OpteoLink
-    fait le point sur l'installation, à distance ou sur place, puis remet un compte rendu
-    clair : ce que l'établissement paie, ce qui peut être optimisé, les économies possibles
-    et les points techniques à surveiller. L'établissement reste libre de donner suite ou non.
-    OpteoLink est un acteur local, installé à Gimont dans le Gers, expert des télécoms
-    professionnels depuis dix-huit ans.
+    fibre, forfaits mobiles, et interconnexions avec les autres systèmes comme l'appel malade
+    ou l'antifugue. La démarche est simple. D'abord, quelques questions au téléphone pour
+    comprendre la situation. Ensuite, la première étape de l'audit est une rencontre sur place,
+    dans l'établissement, avec Jean-Baptiste Marin : un échange rapide, puis le point sur
+    l'installation, toujours sur place. Enfin, OpteoLink remet un compte rendu clair : ce que
+    l'établissement paie, ce qui peut être optimisé, les économies possibles et les points
+    techniques à surveiller. L'établissement reste libre de donner suite ou non.
+    OpteoLink est un acteur local basé à Toulouse, avec dix-huit ans d'expérience dans la
+    téléphonie professionnelle.
   points_forts:
     - "L'audit est gratuit et sans engagement : l'établissement repart avec un état des lieux clair, quoi qu'il décide."
     - "Il porte à la fois sur les coûts, factures et abonnements, et sur la technique, qualité, pannes, couverture DECT."
-    - "La démarche est simple et prend peu de temps à l'établissement : un échange, les dernières factures, et c'est tout."
-    - "Acteur local à Gimont, dans le Gers : interlocuteur unique, intervention rapide, maintenance de proximité."
-    - "Expert des télécoms des établissements de santé, y compris la remontée des alarmes d'appel malade et d'antifugue sur les téléphones."
-    - "Dix-huit ans d'expérience en téléphonie professionnelle."
+    - "La démarche est simple : une rencontre sur place, le point sur l'installation, puis un compte rendu avec les points techniques à surveiller."
+    - "Acteur local basé à Toulouse : interlocuteur unique et proche, intervention rapide, maintenance de proximité."
+    - "Dix-huit ans d'expérience dans la téléphonie professionnelle : standards, DECT, internet et fibre, mobiles pro."
+    - "Une bonne compréhension des systèmes d'appel malade et d'antifugue, et une interconnexion facile avec la téléphonie."
   # Preuves : uniquement des faits validés par JB. L'agent les cite telles quelles, sans chiffre ni nom.
   preuves:
     - "OpteoLink a déjà réalisé cet audit pour des EHPAD comme le vôtre, avec d'excellents retours."
@@ -41,15 +42,19 @@ offre:
     - "OpteoLink travaille avec des EHPAD, des cliniques, des cabinets médicaux et des mairies du Sud-Ouest."
 
 accroche: >-
-  OpteoLink est une entreprise télécom locale, installée dans le Gers. Nous proposons aux
-  EHPAD un audit gratuit de leurs télécoms, sur les coûts comme sur la technique. Plusieurs
-  établissements comme le vôtre ont déjà fait de belles économies, et ils en sont très
-  contents. Je voulais savoir comment cela se passe chez vous aujourd'hui.
+  OpteoLink est une entreprise télécom locale, basée à Toulouse. Nous proposons aux EHPAD
+  un audit technique et financier gratuit de leurs télécoms. Plusieurs établissements comme
+  le vôtre ont déjà fait de belles économies, et ils en sont très contents. Je voulais
+  savoir comment cela se passe chez vous aujourd'hui.
 
 qualification:
   - id: operateurs
     question: "Aujourd'hui, qui sont vos opérateurs pour la téléphonie, internet et les mobiles ?"
-    but: "Opérateurs et prestataires actuels : fixe, standard, internet, mobiles."
+    but: "Opérateurs actuels : fixe, internet, mobiles."
+    obligatoire: true
+  - id: systeme_telephonique
+    question: "Quel système téléphonique avez-vous en place, et qui est votre intégrateur, la société qui l'installe et le maintient ?"
+    but: "Marque et âge du standard, DECT ou IP, intégrateur ou mainteneur actuel."
     obligatoire: true
   - id: satisfaction
     question: "Êtes-vous satisfait de votre téléphonie et de votre internet ? Des coupures, des pannes, des délais d'intervention ?"
@@ -59,9 +64,9 @@ qualification:
     question: "Et côté factures, avez-vous le sentiment de payer le juste prix, ou les coûts ont-ils augmenté ces dernières années ?"
     but: "Ressenti sur les coûts télécom, hausses, factures difficiles à lire. Ne pas demander de montant précis."
     obligatoire: true
-  - id: equipements
-    question: "Les soignants ont-ils des téléphones DECT, et les alarmes d'appel malade arrivent-elles directement dessus ?"
-    but: "DECT ou IP, couverture, remontée des alarmes d'appel malade et d'antifugue."
+  - id: interconnexions
+    question: "Votre téléphonie est-elle reliée à d'autres systèmes, par exemple l'appel malade, l'antifugue, l'interphone ou les alarmes techniques ?"
+    but: "Interconnexions existantes avec d'autres systèmes, et si elles fonctionnent bien. S'il n'y en a pas, le noter."
     obligatoire: true
   - id: echeance
     question: "Savez-vous quand se terminent vos contrats ou vos engagements actuels avec vos opérateurs ?"
@@ -86,8 +91,8 @@ objections:
       restez libre de la suivre ou non.
   - objection: "Envoyez-moi un mail."
     reponse: >-
-      Avec plaisir. Pour que l'audit vous soit vraiment utile, le plus simple est un court
-      échange avec Jean-Baptiste. Seriez-vous d'accord pour un rendez-vous de trente minutes ?
+      Avec plaisir. Pour que l'audit vous soit vraiment utile, le plus simple est que
+      Jean-Baptiste passe vous voir dans l'établissement. Seriez-vous d'accord pour un rendez-vous ?
   - objection: "On dépend du siège, ce n'est pas moi qui décide."
     reponse: >-
       Merci de me le préciser. Un audit de votre établissement donne justement au siège des
@@ -135,8 +140,9 @@ mots_cles_stt:
   - Sewan
   - antifugue
   - appel malade
-  - Gimont
+  - Toulouse
   - Gers
+  - interphone
   - Haute-Garonne
 
 repondeur:
@@ -156,7 +162,7 @@ delai_entre_tentatives_h: 48
 
 rdv:
   duree_min: 30
-  mode: "en visio, par téléphone ou sur place dans l'établissement"
+  mode: "sur place, dans l'établissement"
   creneaux_proposes: 3
   delai_min_jours: 2
   horizon_jours: 15
