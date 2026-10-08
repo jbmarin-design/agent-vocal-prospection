@@ -30,23 +30,24 @@ Hébergement possible : un Proxmox existant (même LAN ou VLAN que le XiVO, de p
 
 | Service | Usage | Où créer la clé | Variable `.env` |
 |---|---|---|---|
-| **Anthropic** | LLM temps réel (Claude Haiku 4.5) et analyse post-appel (Claude Sonnet 5.5) | console.anthropic.com → *API Keys*. Définir une limite de dépense mensuelle. | `ANTHROPIC_API_KEY` |
-| **Deepgram** | Transcription temps réel (nova-3, français) | console.deepgram.com → *API Keys* (rôle *Member*) | `DEEPGRAM_API_KEY` |
-| **Cartesia** (défaut) | Synthèse vocale | play.cartesia.ai → *API Keys*. Choisir une **voix française** et copier son ID. | `CARTESIA_API_KEY`, `CARTESIA_VOICE_ID` |
+| **Anthropic** | LLM temps réel (Claude Haiku 4.5) et analyse post-appel (Claude Sonnet 5.5) | platform.claude.com → *Settings → Workspaces* (créer `agent-vocal`, onglet *Spend limits*), puis *Settings → API keys* (clé rattachée à ce workspace). Recharge automatique désactivée. | `ANTHROPIC_API_KEY` |
+| **Deepgram** | Transcription temps réel (nova-3, français). 200 $ de crédit offert. | console.deepgram.com → *API Keys* (rôle *Member*) | `DEEPGRAM_API_KEY` |
+| **Cartesia** (défaut) | Synthèse vocale (plan Pro, usage commercial). Peut aussi transcrire : `STT_PROVIDER=cartesia`. | play.cartesia.ai → *API Keys*. Dans *Voices*, filtrer **French** et copier l'ID de la voix choisie. | `CARTESIA_API_KEY`, `CARTESIA_VOICE_ID` |
 | *ou* **ElevenLabs** | Synthèse vocale (alternative) | elevenlabs.io → *Profile → API Keys*. Choisir une voix française (ID). | `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `TTS_PROVIDER=elevenlabs` |
-| **Axonaut** | CRM : lecture des prospects, écriture des appels et opportunités | Axonaut → *Paramètres → API* (clé utilisateur) | `AXONAUT_API_KEY` |
+| **Axonaut** | CRM : lecture des prospects, écriture des appels et opportunités (phase 3) | Axonaut → *Paramètres → API* (clé utilisateur) | `AXONAUT_API_KEY` |
+| **Google Cloud** | Agenda (créneaux libres, RDV) et Gmail (emails de confirmation) | console.cloud.google.com : projet, API Calendar + Gmail, consentement **Interne**, client OAuth **Application de bureau**. Voir `docs/google-agenda.md`. | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (`GOOGLE_CALENDAR_ID=primary`) |
 
 > RGPD : vérifier pour chaque fournisseur le DPA et la région de traitement (voir `docs/cadre-legal.md` § 5). Les clés ne quittent jamais la VM (`.env`, droits `600`, non versionné).
 
-LiveKit n'a **pas** besoin de compte : il est auto-hébergé. `install.sh` génère sa paire clé/secret.
+LiveKit n'a **pas** besoin de compte : il est auto-hébergé. `LIVEKIT_API_KEY` et `LIVEKIT_API_SECRET` sont générées par `install.sh`. Laisser `A_GENERER` ou vide dans le `.env`.
 
 ### 0.3 Informations à réunir côté XiVO
 
-- IP du XiVO **vue par la VM** (`XIVO_SIP_ADDRESS`) et, inversement, IP de la VM vue par le XiVO (`NODE_IP`).
-- Pilote SIP du XiVO : chan_sip ou PJSIP (`asterisk -rx 'module show like chan_sip'`).
-- Nom du trunk opérateur existant (ex. `sewan`) et format de numéro qu'il attend (national ou E.164).
-- Numéro présenté autorisé par l'opérateur (ex. `05 87 14 05 00`, ou un SDA dédiée à la prospection).
-- Numéro du poste de JB pour le transfert (ex. `1001`), qui donne `TRANSFER_TARGET=sip:1001@<XIVO>`.
+En mode natif (`xivo/README.md` § 0), le XiVO route, présente le numéro et enregistre. Côté VM, il ne faut que :
+
+- l'IP du XiVO **vue par la VM** (`XIVO_SIP_ADDRESS`) et l'IP de la VM vue par le XiVO (`NODE_IP`) ;
+- le numéro présenté (`SIP_CALLER_NUMBER`, au format `+33…`) ;
+- facultatif : un poste pour le transfert à chaud (`TRANSFER_TARGET=sip:<poste>@<IP XiVO>`). Laissé vide, le transfert est désactivé.
 
 ### 0.4 Choisir la topologie réseau
 
@@ -95,43 +96,75 @@ LiveKit n'a **pas** besoin de compte : il est auto-hébergé. `install.sh` gén�
 
 ## Phase 1 — Installation
 
-### 1.1 Installation automatique
+### 1.1 Installation (recommandée)
 
-Sur la VM, en root :
+Toutes les commandes se font **en root sur la VM**.
+
+**Étape 1 : récupérer le code depuis GitHub**
 
 ```bash
 apt-get update && apt-get install -y git
-git clone git@gitlab.com:<groupe>/agent-vocal-prospection.git /opt/agent-vocal-prospection
-#   (dépôt privé : déposer d'abord une clé de déploiement en lecture dans /root/.ssh/)
+git clone https://github.com/jbmarin-design/agent-vocal-prospection.git /opt/agent-vocal-prospection
 cd /opt/agent-vocal-prospection
-XIVO_SIP_ADDRESS=10.0.0.10 \
-NODE_IP=10.0.0.50 \
-SIP_CALLER_NUMBER=+33587140500 \
-TRANSFER_TARGET=sip:1001@10.0.0.10 \
-ADMIN_CIDRS=10.0.0.0/24,192.168.1.0/24 \
-bash deploy/install.sh
+git log --oneline -3          # vérification : les derniers commits s'affichent
 ```
 
-`install.sh`, dans l'ordre :
+> **Si le dépôt passe en privé**, la commande ci-dessus demandera un identifiant. Deux possibilités :
+> - **jeton GitHub** (le plus simple) : github.com → *Settings → Developer settings → Personal access tokens → Fine-grained tokens* → accès **Contents : Read-only** au seul dépôt `agent-vocal-prospection`. Puis
+>   `git clone https://<jeton>@github.com/jbmarin-design/agent-vocal-prospection.git /opt/agent-vocal-prospection` ;
+> - **clé de déploiement SSH** : `ssh-keygen -t ed25519 -f /root/.ssh/avp_deploy -N ""`, coller `/root/.ssh/avp_deploy.pub` dans le dépôt (*Settings → Deploy keys*, lecture seule), puis
+>   `GIT_SSH_COMMAND="ssh -i /root/.ssh/avp_deploy" git clone git@github.com:jbmarin-design/agent-vocal-prospection.git /opt/agent-vocal-prospection`.
+
+**Étape 2 : poser le fichier `.env`**
+
+Copier le `.env` préparé (`env-vm-avp.txt`, réseau et XiVO déjà renseignés) à la racine du dépôt, puis compléter les clés :
+
+```bash
+nano /opt/agent-vocal-prospection/.env      # coller le contenu de env-vm-avp.txt
+chmod 600 /opt/agent-vocal-prospection/.env
+```
+
+| À renseigner | Valeur |
+|---|---|
+| `ANTHROPIC_API_KEY`, `DEEPGRAM_API_KEY`, `CARTESIA_API_KEY`, `CARTESIA_VOICE_ID` | tes clés (§ 0.2) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | client OAuth Google (peut attendre la phase 4) |
+| `AXONAUT_API_KEY` | peut attendre la phase 3 |
+| `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | laisser `A_GENERER` : générées à l'étape 3 |
+| `SIP_OUTBOUND_TRUNK_ID` | laisser vide : créé à l'étape 3 |
+| `TRANSFER_TARGET` | laisser vide (transfert désactivé) |
+
+Vérification : `grep -E "^(NODE_IP|XIVO_SIP_ADDRESS|SIP_CALLER_NUMBER)=" .env` affiche `10.64.0.11`, `10.64.0.5` et `+33587140500`.
+
+**Étape 3 : lancer l'installation**
+
+```bash
+bash /opt/agent-vocal-prospection/deploy/install.sh
+```
+
+Compter 10 à 20 minutes : le build télécharge les modèles de détection de voix. Le script affiche ses étapes (`==> 1/9 …` à `==> 9/9 …`), dans l'ordre suivant :
 
 1. installe les paquets (git, nftables, gettext-base, sqlite3, sngrep, tcpdump…) ;
 2. installe Docker Engine et le plugin compose depuis le dépôt officiel Docker ;
 3. crée l'utilisateur système `avp` (membre du groupe `docker`) ;
-4. place le code dans `/opt/agent-vocal-prospection` (clone avec `REPO_URL=…`, ou dépôt courant) ;
-5. crée `.env` à partir de `.env.example` (droits 600), **génère `LIVEKIT_API_KEY`/`LIVEKIT_API_SECRET`**, écrit les variables passées en paramètre et déduit `NODE_IP` si elle est vide ;
+4. utilise le code déjà cloné dans `/opt/agent-vocal-prospection` ;
+5. conserve ton `.env`, **génère `LIVEKIT_API_KEY` et `LIVEKIT_API_SECRET`** (à la place de `A_GENERER`) et fixe les droits à 600 ;
 6. rend `deploy/rendered/livekit.yaml`, `sip.yaml` et `avp.nft` (`deploy/render-config.sh`) ;
 7. installe le pare-feu : `/etc/nftables.d/avp.nft`, table `inet avp` dédiée. `/etc/nftables.conf` est remplacé par un simple `include` **sans `flush ruleset`**, pour ne pas effacer les règles de Docker (une sauvegarde est conservée) ;
 8. crée la commande hôte `/usr/local/bin/avp`, qui exécute la CLI dans le conteneur orchestrator ;
-9. construit les images (le build du worker télécharge les modèles silero et turn-detector), démarre redis, livekit et sip, **crée le trunk sortant** (`avp trunk create`) et écrit `SIP_OUTBOUND_TRUNK_ID`, démarre le worker et l'orchestrateur, puis lance `healthcheck.sh`.
+9. construit les images, démarre redis, livekit et sip, **crée le trunk sortant** (`avp trunk create`) et écrit `SIP_OUTBOUND_TRUNK_ID` dans le `.env`, démarre le worker et l'orchestrateur, puis lance `healthcheck.sh`.
 
-Le script est **rejouable** : les secrets existants et le `.env` sont conservés.
+**Vérification** : le script se termine par « Installation terminée ». `healthcheck.sh` ne montre aucune erreur, et `grep SIP_OUTBOUND_TRUNK_ID .env` affiche une valeur `ST_…`.
 
-Ensuite, compléter `.env` (clés IA, voix, Axonaut) :
+Le script est **rejouable** : en cas d'interruption, relance-le. Les secrets déjà générés et le `.env` sont conservés.
+
+**Étape 4 : mises à jour ultérieures**
 
 ```bash
-sudo -u avp nano /opt/agent-vocal-prospection/.env
-cd /opt/agent-vocal-prospection/deploy && sudo -u avp docker compose up -d --force-recreate agent-worker orchestrator
+cd /opt/agent-vocal-prospection && git pull
+cd deploy && sudo -u avp docker compose build && sudo -u avp docker compose up -d
 ```
+
+Une modification de `prompts/` ou `campaigns/` ne demande ni rebuild ni redémarrage. Une modification du `.env` demande `sudo -u avp docker compose up -d --force-recreate agent-worker orchestrator`.
 
 ### 1.2 Variables d'infrastructure (`.env`)
 
@@ -162,13 +195,15 @@ sudo -u avp docker compose up -d --force-recreate livekit sip
 
 Après une modification des variables applicatives (clés IA, voix, `TRANSFER_TARGET`…) : `docker compose up -d --force-recreate agent-worker orchestrator`.
 
-### 1.3 Installation manuelle (équivalent)
+### 1.3 Installation manuelle (équivalent, pour comprendre chaque brique)
+
+Le détail pas à pas, avec une vérification à chaque étape, est dans `MARCHE_A_SUIVRE.md` § 1.1 à 1.10. En résumé :
 
 ```bash
 cp .env.example .env && chmod 600 .env
 sed -i "s/^LIVEKIT_API_KEY=.*/LIVEKIT_API_KEY=API$(openssl rand -hex 8)/" .env
 sed -i "s/^LIVEKIT_API_SECRET=.*/LIVEKIT_API_SECRET=$(openssl rand -hex 32)/" .env
-# éditer XIVO_SIP_ADDRESS, NODE_IP, SIP_CALLER_NUMBER, TRANSFER_TARGET, clés API
+# éditer XIVO_SIP_ADDRESS, NODE_IP, SIP_CALLER_NUMBER, clés API
 cd deploy && ./render-config.sh --print
 docker compose up -d --build redis livekit sip
 docker compose run --rm --no-deps orchestrator avp trunk create   # → ST_xxxx dans .env : SIP_OUTBOUND_TRUNK_ID
@@ -177,7 +212,12 @@ docker compose up -d
 
 ### 1.4 Côté XiVO
 
-Suivre **`xivo/README.md`** : création du trunk statique `livekit`, du contexte `from-livekit`, installation de `extensions_livekit.conf`, réglage du numéro présenté, de la sortie opérateur et de l'enregistrement. Schéma des flux : `docs/xivo-trunk.md`.
+Suivre **`xivo/README.md` § 0 (mode natif)** :
+- trunk PJSIP `livekit` identifié par l'IP de la VM (10.64.0.11), codecs alaw et ulaw, `direct_media=no` ;
+- contexte `livekit`, qui donne accès aux postes internes et aux appels sortants ;
+- règle d'appel sortant qui accepte les numéros `+33…` (ou les réécrit), présente le 05 87 14 05 00 et enregistre si souhaité.
+
+Le dialplan dédié (`xivo/extensions_livekit.conf`) est une option avancée, inutile en mode natif. Schéma des flux : `docs/schemas.md` § 5.
 
 ### 1.5 Vérifications
 
@@ -190,7 +230,7 @@ sudo nft list table inet avp     # règles actives
 docker compose logs sip | grep -i "server starting"     # local=<IP> external=<IP annoncée>
 ```
 
-Côté XiVO : `asterisk -rx 'sip show peer livekit'` doit afficher `Status : OK`.
+Côté XiVO : `asterisk -rx 'pjsip show endpoint livekit'` doit montrer le contact joignable (*Avail*).
 
 Premier appel (campagne de test `echo`, voir `docs/protocoles/phase-1.md`) :
 
@@ -222,14 +262,14 @@ Sur le XiVO : `asterisk -rvvv`, puis `sip set debug peer livekit` (chan_sip) ou 
 
 ### 403 Forbidden
 
-- XiVO : le trunk n'accepte pas l'INVITE. `insecure=port,invite` manque, ou l'IP source de l'INVITE n'est pas le `host=` du trunk (NAT : l'IP vue par le XiVO est l'IP publique). En PJSIP, `identify match` doit contenir cette IP. Dans les logs Asterisk, un INVITE classé « anonymous » ou « No matching endpoint » le confirme.
-- Dialplan : numéro refusé par le filtre (08, international, court) → `Hangup(21)`.
-- Opérateur : numéro présenté refusé. Il faut un numéro appartenant au compte opérateur (`AVP_CALLERID`).
+- XiVO : le trunk n'accepte pas l'INVITE. En PJSIP, la section `identify` (`match`) doit contenir l'IP de la VM (10.64.0.11). Dans les logs Asterisk, un INVITE classé « anonymous » ou « No matching endpoint » le confirme.
+- Règle d'appel sortant : le numéro `+33…` ne correspond à aucun motif du contexte `livekit`.
+- Opérateur : numéro présenté refusé. Il faut un numéro appartenant au compte opérateur.
 
 ### 404 Not Found
 
-- Le contexte du trunk n'est pas `from-livekit`, ou `dialplan reload` n'a pas été fait (`dialplan show from-livekit`).
-- Le numéro ne correspond pas aux motifs (`+33…` attendu). Contrôler le numéro dans la ligne `Executing [...]`.
+- Le contexte du trunk n'est pas `livekit`, ou ce contexte n'inclut pas les appels sortants (`dialplan show livekit`).
+- Le numéro `+33…` ne correspond à aucun motif de sortie. Contrôler le numéro dans la ligne `Executing [...]`, et ajouter un motif `_+33.` ou une réécriture dans la règle d'appel sortant.
 - Numéro inexistant côté opérateur (cause 1). C'est normal : l'agent classera l'appel en « mauvais numéro ».
 
 ### 488 Not Acceptable Here / 415 : codecs
@@ -239,7 +279,7 @@ Sur le XiVO : `asterisk -rvvv`, puis `sip set debug peer livekit` (chan_sip) ou 
 
 ### Ça sonne, le prospect décroche, mais pas d'audio du tout
 
-1. `directmedia=no` sur le trunk livekit ? Avec un réinvite direct, le RTP partirait de l'opérateur vers la VM.
+1. `direct_media=no` sur le trunk livekit ? Avec un réinvite direct, le RTP partirait de l'opérateur vers la VM.
 2. RTP bloqué vers la VM : `sudo tcpdump -ni any udp portrange 10000-20000`. Si rien n'arrive : pare-feu du site, NAT, ou mauvaise IP dans le SDP.
 3. Mauvaise IP annoncée par livekit-sip : `docker compose logs sip | grep "server starting"` montre `external=`. Elle doit être **l'IP que le XiVO peut joindre** (NODE_IP). Sinon, corriger NODE_IP, relancer `render-config.sh`, puis recréer `sip`.
 4. Le worker n'a pas rejoint la room : `docker compose logs agent-worker` (erreur de clé Deepgram, Cartesia, Anthropic ?).
@@ -255,11 +295,11 @@ Sur le XiVO : `asterisk -rvvv`, puis `sip set debug peer livekit` (chan_sip) ou 
 ### L'appel coupe au bout de ~30 s ou à heure fixe
 
 - Absence d'ACK ou de RTP : `media_timeout` de LiveKit SIP, ou `rtptimeout` d'Asterisk. C'est un symptôme d'audio unidirectionnel (voir ci-dessus).
-- Coupure à 7 minutes : garde-fou `AVP_MAX_DURATION` du dialplan, voulu.
+- Coupure vers 6 minutes : durée maximale d'appel de l'agent (`MAX_CALL_DURATION_S`), voulue.
 
 ### Transfert vers JB refusé
 
-Voir `xivo/README.md` § 5.3 (`allowtransfer`, contexte `avp-transfer`, motif du poste).
+Le transfert est désactivé tant que `TRANSFER_TARGET` est vide. S'il est activé : voir `xivo/README.md` § 5 (`allow_transfer=yes` sur le trunk, poste joignable depuis le contexte `livekit`).
 
 ### Le worker n'apparaît pas « registered »
 

@@ -65,7 +65,10 @@ Le détail est dans `docs/installation.md` § 0.3 et 0.4, avec le choix de topol
 
 ## Phase 1 — Infrastructure
 
-L'installation existe en **automatique** (`deploy/install.sh`, voir `docs/installation.md` § 1.1). Ci-dessous, la version **pas à pas**, qui fait la même chose et vous permet de comprendre chaque brique.
+Deux chemins mènent au même résultat. Choisis-en **un seul** :
+
+- **Automatique (recommandé)** : `docs/installation.md` § 1.1. Clone GitHub, puis `.env`, puis `install.sh` : environ 20 minutes. Va ensuite directement au § 1.9 ci-dessous (XiVO), puis au § 1.10 (premier appel).
+- **Pas à pas** : les § 1.1 à 1.10 ci-dessous. C'est exactement ce que fait le script, commande par commande, pour comprendre chaque brique.
 
 ### 1.1 Paquets et Docker
 
@@ -86,7 +89,7 @@ useradd --system --create-home --home-dir /home/avp --shell /bin/bash avp && use
 
 **Faire** :
 ```bash
-git clone <URL_DU_DEPOT> /opt/agent-vocal-prospection
+git clone https://github.com/jbmarin-design/agent-vocal-prospection.git /opt/agent-vocal-prospection
 chown -R avp:avp /opt/agent-vocal-prospection
 cd /opt/agent-vocal-prospection
 ```

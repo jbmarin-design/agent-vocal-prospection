@@ -23,7 +23,7 @@ Pour chaque étape, noter le résultat (OK/KO, valeurs relevées, remarques) dan
 | 0.13 | Clé Deepgram | `curl -s https://api.deepgram.com/v1/projects -H "Authorization: Token $KEY" \| head -c 300` | JSON `projects` | OK/KO |
 | 0.14 | Clé TTS + voix | Cartesia : `curl -s https://api.cartesia.ai/voices/$VOICE -H "X-API-Key: $KEY" -H "Cartesia-Version: 2025-04-16" \| head -c 300` ; ElevenLabs : `curl -s https://api.elevenlabs.io/v1/voices/$VOICE -H "xi-api-key: $KEY" \| head -c 300` | JSON de la voix, langue française | fournisseur, ID et nom de la voix |
 | 0.15 | Clé Axonaut | `curl -s "https://axonaut.com/api/v2/companies?search=test" -H "userApiKey: $KEY" \| head -c 300` | JSON (liste, éventuellement vide), pas de 401 | OK/KO |
-| 0.16 | Dépôt Git | clé de déploiement (lecture seule) ajoutée au dépôt GitLab ; `git ls-remote <url>` depuis la VM | liste des refs affichée | URL du dépôt (`REPO_URL`) |
+| 0.16 | Dépôt Git | `git ls-remote https://github.com/jbmarin-design/agent-vocal-prospection.git` depuis la VM (dépôt privé : voir `docs/installation.md` § 1.1) | liste des refs affichée | URL du dépôt |
 
 ## Critère de validation de la phase
 

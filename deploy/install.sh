@@ -2,12 +2,12 @@
 # Installation de l'agent vocal de prospection sur une VM Debian 12 (bookworm).
 #
 # Usage (en root) :
-#   curl -fsSLO <url brute de deploy/install.sh>      # ou copier le fichier sur la VM
-#   sudo REPO_URL=git@gitlab.com:opteolink/agent-vocal-prospection.git \
-#        XIVO_SIP_ADDRESS=10.0.0.10 NODE_IP=10.0.0.50 SIP_CALLER_NUMBER=+33587140500 \
-#        bash install.sh
+#   git clone https://github.com/jbmarin-design/agent-vocal-prospection.git /opt/agent-vocal-prospection
+#   cp env-vm-avp.txt /opt/agent-vocal-prospection/.env      # .env préparé (clés API complétées)
+#   sudo bash /opt/agent-vocal-prospection/deploy/install.sh
 #
-#   ou, depuis un dépôt déjà cloné :   sudo bash deploy/install.sh
+#   ou sans clone préalable :
+#   sudo REPO_URL=https://github.com/jbmarin-design/agent-vocal-prospection.git XIVO_SIP_ADDRESS=10.64.0.5 bash install.sh
 #
 # Variables (toutes optionnelles sauf indication) :
 #   REPO_URL          URL Git du dépôt (obligatoire si le script n'est pas lancé depuis un clone)
@@ -82,7 +82,7 @@ elif [[ -f "$SCRIPT_DIR/../pyproject.toml" && -z "${REPO_URL:-}" ]]; then
   mkdir -p "$INSTALL_DIR"
   cp -a "$SCRIPT_DIR/../." "$INSTALL_DIR/"
 else
-  [[ -n "${REPO_URL:-}" ]] || die "REPO_URL non fourni (ex. REPO_URL=git@gitlab.com:opteolink/agent-vocal-prospection.git)"
+  [[ -n "${REPO_URL:-}" ]] || die "REPO_URL non fourni (ex. REPO_URL=https://github.com/jbmarin-design/agent-vocal-prospection.git)"
   git clone --branch "$REPO_BRANCH" "$REPO_URL" "$INSTALL_DIR" \
     || die "clonage impossible. Pour un dépôt privé : clé SSH de déploiement dans /root/.ssh, ou URL https avec jeton"
 fi
@@ -109,11 +109,11 @@ set_env() { # clé valeur : remplace la ligne existante ou l'ajoute
 }
 
 cur_key="$(get_env LIVEKIT_API_KEY)"; cur_secret="$(get_env LIVEKIT_API_SECRET)"
-if [[ -z "$cur_key" || "$cur_key" == "APIxxxxxxxxxxxxxxxx" || "$cur_key" == "devkey" ]]; then
+if [[ -z "$cur_key" || "$cur_key" == "APIxxxxxxxxxxxxxxxx" || "$cur_key" == "devkey" || "$cur_key" == A_GENERER* ]]; then
   set_env LIVEKIT_API_KEY "API$(openssl rand -hex 8)"
   info "LIVEKIT_API_KEY générée"
 fi
-if [[ -z "$cur_secret" || "$cur_secret" == remplacer_* || "$cur_secret" == change-me* || ${#cur_secret} -lt 32 ]]; then
+if [[ -z "$cur_secret" || "$cur_secret" == remplacer_* || "$cur_secret" == change-me* || "$cur_secret" == A_GENERER* || ${#cur_secret} -lt 32 ]]; then
   set_env LIVEKIT_API_SECRET "$(openssl rand -hex 32)"
   info "LIVEKIT_API_SECRET générée (64 caractères hexadécimaux)"
 fi
@@ -246,6 +246,7 @@ Installation terminée.
       cd $INSTALL_DIR/deploy && ./render-config.sh && docker compose up -d --force-recreate
       sudo install -m 644 rendered/avp.nft /etc/nftables.d/avp.nft && sudo nft -f /etc/nftables.d/avp.nft
   Contrôles     : avp check   |   $INSTALL_DIR/deploy/healthcheck.sh
-  Côté XiVO     : suivre $INSTALL_DIR/xivo/README.md (trunk « livekit » + contexte from-livekit)
+  Côté XiVO     : suivre $INSTALL_DIR/xivo/README.md § 0 (trunk PJSIP « livekit », mode natif)
+  Google Agenda : $INSTALL_DIR/docs/google-agenda.md (avp google auth)
   Premier appel : avp call test --number +336XXXXXXXX --campaign echo --wait
 EOF
