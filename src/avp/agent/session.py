@@ -72,6 +72,8 @@ def build_tts(settings: Settings) -> Any:
         logger.warning("CARTESIA_VOICE_ID vide : voix par défaut de Cartesia (souvent anglophone)")
     if settings.cartesia_api_key:
         kwargs["api_key"] = settings.cartesia_api_key
+    if settings.tts_speed is not None:
+        kwargs["speed"] = settings.tts_speed
     return cartesia.TTS(**kwargs)
 
 

@@ -18,7 +18,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(".env",), env_file_encoding="utf-8", extra="ignore", case_sensitive=False
+        env_file=(".env",), env_file_encoding="utf-8", extra="ignore", case_sensitive=False,
+        env_ignore_empty=True,  # une variable vide (ex. TTS_SPEED=) garde sa valeur par défaut
     )
 
     # --- Chemins ---------------------------------------------------------------
@@ -57,6 +58,9 @@ class Settings(BaseSettings):
     cartesia_api_key: str = ""
     cartesia_model: str = "sonic-3"
     cartesia_voice_id: str = ""
+    tts_speed: float | None = Field(
+        default=None, ge=0.6, le=2.0, description="Débit de la voix (Cartesia sonic-3) : 1.0 normal, 1.1-1.2 plus rapide"
+    )
     elevenlabs_api_key: str = ""
     elevenlabs_model: str = "eleven_flash_v2_5"
     elevenlabs_voice_id: str = ""
