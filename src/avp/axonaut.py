@@ -469,6 +469,35 @@ class AxonautClient:
         }
         return await self._write("POST", "/events", payload)
 
+    async def create_employee(
+        self,
+        *,
+        company_id: int,
+        firstname: str = "",
+        lastname: str = "",
+        email: str = "",
+        phone_number: str = "",
+        cellphone_number: str = "",
+        job: str = "",
+    ) -> dict:
+        """Contact (« employé ») d'une société. Si l'API refuse le champ `job`, on réessaie sans."""
+        payload: dict[str, Any] = {
+            "company_id": int(company_id),
+            "firstname": firstname[:255] or None,
+            "lastname": lastname[:255] or None,
+            "email": email or None,
+            "phone_number": phone_number[:50] or None,
+            "cellphone_number": cellphone_number[:50] or None,
+            "job": job[:255] or None,
+        }
+        try:
+            return await self._write("POST", "/employees", payload)
+        except AxonautError:
+            if not payload.get("job"):
+                raise
+            payload.pop("job")
+            return await self._write("POST", "/employees", payload)
+
     async def create_opportunity(
         self,
         *,

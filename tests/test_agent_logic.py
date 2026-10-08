@@ -225,3 +225,49 @@ def test_format_latency():
     )
     assert logic.format_latency("assistant", {}) is None
     assert logic.format_latency("system", {"llm_node_ttft": 1.0}) is None
+
+
+def test_merge_contact_complete_la_meme_personne():
+    from avp.models import ContactInfo
+
+    st = CallState()
+    logic.merge_contact(st, ContactInfo(nom="Martin", fonction="directrice", disponibilites="mardi matin"))
+    logic.merge_contact(st, ContactInfo(prenom="Claire", nom="martin", fonction="", telephone="06 12 34 56 78",
+                                        email="c.martin@tilleuls.fr"))
+    logic.merge_contact(st, ContactInfo(fonction="agent technique", email="arobase tilleuls"))
+    assert len(st.contacts) == 2
+    claire = st.contacts[0]
+    assert claire.nom_complet == "Claire martin" and claire.fonction == "directrice"
+    assert claire.telephone == "+33612345678" and claire.disponibilites == "mardi matin"
+    tech = st.contacts[1]
+    assert tech.email == "" and "email dicté : arobase tilleuls" in tech.notes
+    # même fonction sans nom : la fiche est complétée
+    logic.merge_contact(st, ContactInfo(fonction="Agent technique", telephone="pas un numéro"))
+    assert len(st.contacts) == 2 and st.contacts[1].telephone == "pas un numéro"
+
+
+def test_pick_decision_contact_et_note():
+    from avp.models import ContactInfo
+
+    contacts = [
+        ContactInfo(nom="Durand", fonction="agent technique"),
+        ContactInfo(prenom="Claire", nom="Martin", fonction="Directrice", telephone="+33612345678"),
+    ]
+    assert logic.pick_decision_contact(contacts).nom == "Martin"
+    assert logic.pick_decision_contact([ContactInfo(fonction="secrétariat")]) is None
+    note = logic.contacts_note(contacts, datetime(2026, 10, 8, 10, tzinfo=PARIS))
+    assert note.startswith("Contacts recueillis le 08/10/2026 : Durand (agent technique) ; Claire Martin")
+
+
+def test_finalize_enrichit_la_fiche_prospect(tmp_path, make_campaign):
+    from avp.models import ContactInfo
+
+    settings, ud, pid = _setup(tmp_path, make_campaign)
+    ud.answered_at = datetime.now(UTC)
+    ud.state.outcome = CallOutcome.BARRAGE
+    ud.state.contacts = [ContactInfo(prenom="Claire", nom="Martin", fonction="directrice",
+                                     disponibilites="le mardi matin")]
+    logic.finalize_call(ud, [])
+    row = db.get_prospect_row(pid, settings.db_path)
+    assert row["contact_name"] == "Claire Martin" and row["contact_role"] == "directrice"
+    assert "dispo : le mardi matin" in row["notes"]

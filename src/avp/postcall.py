@@ -32,7 +32,9 @@ from .models import (
     CallOutcome,
     CallRecordFile,
     Campaign,
+    ContactInfo,
 )
+from .phone import is_mobile_fr, to_national_fr
 
 log = logging.getLogger("avp.postcall")
 
@@ -355,6 +357,48 @@ def _event_title(outcome: CallOutcome, analysis: CallAnalysis | None) -> str:
     return f"Appel IA — {OUTCOME_LABELS.get(outcome, outcome.value)} — {score}"
 
 
+def _contact_line(c: ContactInfo) -> str:
+    """« Mme Martin Claire (directrice) — 06 12 34 56 78 — c.martin@… — dispo : mardi matin »."""
+    head = c.nom_complet or "(nom non donné)"
+    if c.fonction:
+        head += f" ({c.fonction})"
+    parts = [head]
+    if c.telephone:
+        parts.append(to_national_fr(c.telephone))
+    if c.email:
+        parts.append(c.email)
+    if c.disponibilites:
+        parts.append(f"dispo : {c.disponibilites}")
+    if c.notes:
+        parts.append(c.notes)
+    return " — ".join(parts)
+
+
+async def _sync_contacts(axonaut: AxonautClient, company_id: int, contacts: list[ContactInfo]) -> list[Any]:
+    """Crée dans Axonaut les contacts nommés (ou avec email) qui n'existent pas encore sur la société."""
+    wanted = [c for c in contacts if c.nom or c.email]
+    if not wanted:
+        return []
+    existing: list[dict] = []
+    if hasattr(axonaut, "list_company_employees"):
+        existing = await axonaut.list_company_employees(company_id)
+    known_emails = {str(e.get("email") or "").lower() for e in existing} - {""}
+    known_names = {str(e.get("lastname") or "").lower() for e in existing} - {""}
+    ids: list[Any] = []
+    for c in wanted:
+        if (c.email and c.email.lower() in known_emails) or (c.nom and c.nom.lower() in known_names):
+            continue
+        mobile = c.telephone if c.telephone and is_mobile_fr(c.telephone) else ""
+        fixe = c.telephone if c.telephone and not mobile else ""
+        resp = await axonaut.create_employee(
+            company_id=company_id, firstname=c.prenom, lastname=c.nom or c.fonction, email=c.email,
+            phone_number=to_national_fr(fixe) if fixe else "",
+            cellphone_number=to_national_fr(mobile) if mobile else "", job=c.fonction,
+        )
+        ids.append(_id(resp))
+    return ids
+
+
 def _event_content(
     record: CallRecordFile, analysis: CallAnalysis | None, campaign: Campaign, tz: ZoneInfo, transcript_path: str
 ) -> str:
@@ -368,6 +412,9 @@ def _event_content(
         lines.append(f"Interlocuteur : {contact}{f' ({fonction})' if fonction else ''}")
     if st.contact_email:
         lines.append(f"Email : {st.contact_email}")
+    if st.contacts:
+        lines += ["", "Contacts recueillis :"]
+        lines += [f"- {_contact_line(c)}" for c in st.contacts]
     if analysis:
         for label, val in (
             ("Besoin", analysis.besoin),
@@ -437,7 +484,7 @@ async def sync_axonaut(
     """Écrit le résultat de l'appel dans Axonaut. Retourne un récapitulatif des ids créés/mis à jour.
 
     Clés possibles : `skipped`, `event_id`, `opportunity_id`, `opportunity_action` (cree|maj),
-    `rdv_event_id`, `optout_event_id`, `task_ids`, `erreurs` (liste de messages, vide si tout est passé).
+    `rdv_event_id`, `optout_event_id`, `contact_ids`, `task_ids`, `erreurs` (liste de messages, vide si tout est passé).
     """
     meta = record.metadata
     if meta.test_mode:
@@ -531,6 +578,13 @@ async def sync_axonaut(
         result["event_id"] = _id(ev)
     except AxonautError as exc:
         fail("événement d'appel", exc)
+
+    # 2 bis) Contacts recueillis → fiches contact de la société (pas en cas d'opposition)
+    if st.contacts and not st.optout:
+        try:
+            result["contact_ids"] = await _sync_contacts(axonaut, company_id, st.contacts)
+        except AxonautError as exc:
+            fail("contacts", exc)
 
     today = datetime.now(tz).date()
 

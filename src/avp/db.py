@@ -261,6 +261,27 @@ def release_prospect(
         )
 
 
+def enrich_prospect_contact(
+    prospect_id: int, contact_name: str = "", contact_role: str = "", note: str = "", db_path: Path | None = None
+) -> None:
+    """Après un appel : renseigne le contact s'il était vide, et ajoute une note datée à la fiche.
+
+    Le contact connu sert à la tentative suivante (« Pourrais-je parler à Madame Martin ? »).
+    """
+    with connect(db_path) as c:
+        if contact_name:
+            c.execute(
+                "UPDATE prospects SET contact_name=?, contact_role=? WHERE id=? AND contact_name=''",
+                (contact_name, contact_role, prospect_id),
+            )
+        if note:
+            c.execute(
+                "UPDATE prospects SET notes = CASE WHEN notes='' THEN ? ELSE notes || char(10) || ? END WHERE id=?",
+                (note, note, prospect_id),
+            )
+        c.execute("UPDATE prospects SET updated_at=? WHERE id=?", (_iso(utcnow()), prospect_id))
+
+
 def set_prospect_score(prospect_id: int, score: str, db_path: Path | None = None) -> None:
     with connect(db_path) as c:
         c.execute("UPDATE prospects SET last_score=?, updated_at=? WHERE id=?", (score, _iso(utcnow()), prospect_id))

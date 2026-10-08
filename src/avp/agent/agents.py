@@ -20,7 +20,7 @@ from livekit import api
 from livekit.agents import Agent, RunContext, StopResponse, ToolError, function_tool, get_job_context
 
 from ..livekit_admin import participant_identity_for
-from ..models import Callback, CallOutcome, Rdv
+from ..models import Callback, CallOutcome, ContactInfo, Rdv
 from ..prompts import build_instructions, format_slot_fr
 from .logic import (
     END_OUTCOMES_ACCUEIL,
@@ -30,6 +30,7 @@ from .logic import (
     looks_like_email,
     looks_like_voicemail,
     match_slot,
+    merge_contact,
     parse_tool_datetime,
     question_ids,
 )
@@ -139,6 +140,40 @@ class _BaseProspectAgent(Agent):
             ud.state.contact_name = personne.strip()
         logger.info("rappel noté : %s (%s)", moment, when)
         return "Rappel noté. Remerciez, dites au revoir, puis appelez terminer_appel avec l'issue rappel."
+
+    @function_tool
+    async def noter_contact(
+        self,
+        context: RunContext[CallUserData],
+        fonction: str,
+        prenom: str = "",
+        nom: str = "",
+        telephone: str = "",
+        email: str = "",
+        disponibilites: str = "",
+        notes: str = "",
+    ) -> None:
+        """Note les coordonnées d'une personne utile : le décideur, l'agent technique, ou toute personne
+        citée par votre interlocuteur. Outil silencieux : appelez-le dans la même réponse que votre
+        phrase, jamais seul. Rappelez-le pour compléter une fiche (même nom ou même fonction).
+
+        Args:
+            fonction: Le rôle de la personne (ex. « directrice », « agent technique », « IDEC », « secrétariat »).
+            prenom: Le prénom, si donné.
+            nom: Le nom de famille, si donné.
+            telephone: Une ligne directe ou un portable, chiffres tels que dictés.
+            email: L'adresse email, telle que répétée et confirmée.
+            disponibilites: Quand la joindre, en clair (ex. « le mardi matin », « après 16 heures », « absente jusqu'au 20 »).
+            notes: Toute autre information utile (ex. « arrivée il y a trois mois », « gère aussi le site de Lectoure »).
+        """
+        ud = context.userdata
+        contact = merge_contact(ud.state, ContactInfo(
+            prenom=prenom, nom=nom, fonction=fonction, telephone=telephone,
+            email=email, disponibilites=disponibilites, notes=notes,
+        ))
+        logger.info("contact noté : %s (%s)", contact.nom_complet or "?", contact.fonction)
+        _spawn(_ensure_reply(context.session))
+        return None
 
     @function_tool
     async def enregistrer_opposition(self, context: RunContext[CallUserData], motif: str = "") -> None:

@@ -30,9 +30,11 @@ from ..models import (
     CallRecordFile,
     CallState,
     Campaign,
+    ContactInfo,
     Prospect,
     TranscriptTurn,
 )
+from ..phone import InvalidPhoneNumber, normalize_phone
 
 logger = logging.getLogger("avp.agent.logic")
 
@@ -350,6 +352,15 @@ def finalize_call(ud: CallUserData, transcript: list[TranscriptTurn], *, error: 
             status, next_at = outcomes.next_step(
                 outcome, ud.campaign, meta.attempt, datetime.now(UTC), ud.state.callback
             )
+            if ud.state.contacts and not ud.state.optout:
+                decider = pick_decision_contact(ud.state.contacts)
+                db.enrich_prospect_contact(
+                    meta.prospect.id,
+                    contact_name=decider.nom_complet if decider else "",
+                    contact_role=decider.fonction if decider else "",
+                    note=contacts_note(ud.state.contacts, datetime.now(ud.tz)),
+                    db_path=ud.settings.db_path,
+                )
             db.release_prospect(
                 meta.prospect.id,
                 status,
@@ -427,3 +438,73 @@ def format_latency(role: str, metrics: Mapping[str, Any] | None) -> str | None:
         if isinstance(metrics.get(key), int | float)
     ]
     return ", ".join(parts) or None
+
+
+# ---------------------------------------------------------------------------
+# Contacts recueillis
+# ---------------------------------------------------------------------------
+
+
+def _same_person(a: ContactInfo, b: ContactInfo) -> bool:
+    if a.email and b.email:
+        return a.email.lower() == b.email.lower()
+    if a.nom and b.nom:
+        return a.nom.lower() == b.nom.lower() and (not a.prenom or not b.prenom or a.prenom.lower() == b.prenom.lower())
+    # sans nom : même fonction (ex. « agent technique » complété en deux fois)
+    return bool(not a.nom and not b.nom and a.fonction and a.fonction.lower() == b.fonction.lower())
+
+
+def merge_contact(state: CallState, new: ContactInfo) -> ContactInfo:
+    """Ajoute un contact à l'état d'appel, ou complète la fiche existante de la même personne.
+
+    Le téléphone est normalisé en E.164 quand c'est possible (sinon gardé tel que dicté).
+    Les champs vides ne remplacent jamais une valeur déjà connue.
+    """
+    data = {k: (v.strip() if isinstance(v, str) else v) for k, v in new.model_dump().items()}
+    if data["telephone"]:
+        try:
+            data["telephone"] = normalize_phone(data["telephone"])
+        except InvalidPhoneNumber:
+            pass
+    if data["email"] and not looks_like_email(data["email"]):
+        data["notes"] = " ".join(x for x in (data["notes"], f"email dicté : {data['email']}") if x)
+        data["email"] = ""
+    contact = ContactInfo(**data)
+    for i, old in enumerate(state.contacts):
+        if _same_person(old, contact):
+            merged = old.model_dump()
+            for k, v in contact.model_dump().items():
+                if v and (k != "notes" or v not in merged[k]):
+                    merged[k] = v if k != "notes" or not merged[k] else f"{merged[k]} ; {v}"
+            state.contacts[i] = ContactInfo(**merged)
+            return state.contacts[i]
+    state.contacts.append(contact)
+    return contact
+
+
+_DECIDER_WORDS = ("direct", "gérant", "gerant", "responsable d'établissement", "président", "president")
+
+
+def pick_decision_contact(contacts: Sequence[ContactInfo]) -> ContactInfo | None:
+    """Le contact à demander au prochain appel : un directeur ou une directrice nommé(e) en priorité,
+    sinon le premier contact nommé."""
+    named = [c for c in contacts if c.nom_complet]
+    for c in named:
+        if any(w in c.fonction.lower() for w in _DECIDER_WORDS):
+            return c
+    return named[0] if named else None
+
+
+def contacts_note(contacts: Sequence[ContactInfo], now: datetime) -> str:
+    """Note de fiche prospect résumant les contacts recueillis lors d'un appel."""
+    lines = []
+    for c in contacts:
+        bits = [c.nom_complet or "?", f"({c.fonction})" if c.fonction else ""]
+        if c.telephone:
+            bits.append(c.telephone)
+        if c.email:
+            bits.append(c.email)
+        if c.disponibilites:
+            bits.append(f"dispo : {c.disponibilites}")
+        lines.append(" ".join(b for b in bits if b))
+    return f"Contacts recueillis le {now:%d/%m/%Y} : " + " ; ".join(lines)

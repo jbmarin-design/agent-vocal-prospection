@@ -262,6 +262,22 @@ class Callback(BaseModel):
     notes: str = ""
 
 
+class ContactInfo(BaseModel):
+    """Contact recueilli pendant l'appel (décideur, agent technique, secrétariat…)."""
+
+    prenom: str = ""
+    nom: str = ""
+    fonction: str = ""
+    telephone: str = ""  # E.164 si le numéro est valide, sinon tel que dicté
+    email: str = ""
+    disponibilites: str = ""  # en clair : « le mardi matin », « après 16 h »…
+    notes: str = ""
+
+    @property
+    def nom_complet(self) -> str:
+        return " ".join(x for x in (self.prenom, self.nom) if x).strip()
+
+
 class CallState(BaseModel):
     """Rempli par les outils pendant l'appel, sérialisé en fin d'appel."""
 
@@ -271,6 +287,7 @@ class CallState(BaseModel):
     contact_name: str = ""
     contact_role: str = ""
     contact_email: str = ""
+    contacts: list[ContactInfo] = Field(default_factory=list)  # personnes recueillies (outil noter_contact)
     answers: dict[str, str] = Field(default_factory=dict)  # id question → réponse
     rdv: Rdv | None = None
     callback: Callback | None = None

@@ -226,6 +226,14 @@ class FakeAxonaut:
         self.calls.append(("create_task", kw))
         return self._next()
 
+    async def list_company_employees(self, company_id: int) -> list[dict]:
+        self.calls.append(("list_company_employees", {"company_id": company_id}))
+        return [{"firstname": "Paul", "lastname": "Durand", "email": "p.durand@tilleuls.fr"}]
+
+    async def create_employee(self, **kw: Any) -> dict:
+        self.calls.append(("create_employee", kw))
+        return self._next()
+
     async def aclose(self) -> None:
         pass
 
@@ -392,3 +400,34 @@ async def test_process_pending_counts(tmp_path: Path):
     out = await process_pending(10, llm_client=FakeLLM(GOOD), axonaut=FakeAxonaut(), settings=st)  # type: ignore[arg-type]
     assert out == {"analyses": 1, "erreurs": 0, "synchro": 1}
     assert await process_pending(10, llm_client=FakeLLM(), settings=st) == {"analyses": 0, "erreurs": 0, "synchro": 0}
+
+
+async def test_sync_barrage_cree_les_contacts_recueillis(tmp_path: Path):
+    from avp.models import ContactInfo
+
+    ax = FakeAxonaut()
+    contacts = [
+        ContactInfo(prenom="Claire", nom="Martin", fonction="directrice", telephone="+33612345678",
+                    email="c.martin@tilleuls.fr", disponibilites="le mardi matin"),
+        ContactInfo(nom="Durand", fonction="agent technique"),  # déjà connu dans Axonaut
+        ContactInfo(fonction="secrétariat", disponibilites="9 h - 12 h"),  # sans nom : non créé
+    ]
+    res = await sync_axonaut(record(CallOutcome.BARRAGE, contacts=contacts), analysis(), campaign(),
+                             axonaut=ax, settings=settings_for(tmp_path))
+    assert res["erreurs"] == []
+    (emp,) = ax.of("create_employee")
+    assert emp["lastname"] == "Martin" and emp["firstname"] == "Claire" and emp["job"] == "directrice"
+    assert emp["cellphone_number"] == "06 12 34 56 78" and emp["phone_number"] == ""
+    content = ax.of("create_event")[0]["content"]
+    assert "Contacts recueillis :" in content
+    assert "Claire Martin (directrice) — 06 12 34 56 78 — c.martin@tilleuls.fr — dispo : le mardi matin" in content
+    assert "(nom non donné) (secrétariat) — dispo : 9 h - 12 h" in content
+
+
+async def test_sync_opposition_ne_cree_pas_de_contact(tmp_path: Path):
+    from avp.models import ContactInfo
+
+    ax = FakeAxonaut()
+    rec = record(CallOutcome.OPPOSITION, optout=True, contacts=[ContactInfo(nom="Martin", fonction="directrice")])
+    await sync_axonaut(rec, analysis(), campaign(), axonaut=ax, settings=settings_for(tmp_path))
+    assert ax.of("create_employee") == []
