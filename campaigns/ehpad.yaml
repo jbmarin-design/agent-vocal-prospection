@@ -17,18 +17,28 @@ cible:
 
 offre:
   resume: >-
-    OpteoLink propose aux EHPAD un audit technique et financier gratuit et sans engagement
-    de leurs télécoms : téléphonie et standard, téléphones DECT des soignants, internet et
+    Le constat de départ : dans les EHPAD, les installations télécom se sont construites
+    petit à petit, au fil des années, par petites évolutions successives. Entre-temps, les
+    directeurs ont changé, les agents techniques aussi, et ils sont souvent multitâches.
+    Résultat, plus personne n'a vraiment une vue d'ensemble : on perd peu à peu la maîtrise
+    de ce qui est installé, de ce qu'on paie et de qui fait quoi. C'est normal, et ce n'est
+    la faute de personne.
+    Pour remettre tout cela à plat, OpteoLink propose aux EHPAD un audit technique et
+    financier gratuit et sans engagement de leurs télécoms : téléphonie et standard, téléphones DECT des soignants, internet et
     fibre, forfaits mobiles, et interconnexions avec les autres systèmes comme l'appel malade
     ou l'antifugue. La démarche est simple. D'abord, quelques questions au téléphone pour
     comprendre la situation. Ensuite, la première étape de l'audit est une rencontre sur place,
     dans l'établissement, avec Jean-Baptiste Marin : un échange rapide, puis le point sur
     l'installation, toujours sur place. Enfin, OpteoLink remet un compte rendu clair : ce que
     l'établissement paie, ce qui peut être optimisé, les économies possibles et les points
-    techniques à surveiller. L'établissement reste libre de donner suite ou non.
+    techniques à surveiller. On en discute ensemble : ce qui va, ce qui ne va pas. C'est un
+    regard extérieur qu'OpteoLink offre à l'établissement, qui reste libre de donner suite ou
+    non.
     OpteoLink est un acteur local basé à Toulouse, avec dix-huit ans d'expérience dans la
     téléphonie professionnelle.
   points_forts:
+    - "Remettre à plat une installation qui s'est construite par petites touches, et retrouver une vue d'ensemble claire, même après des changements d'équipe."
+    - "Un regard extérieur et neutre, offert : on discute ensemble de ce qui va et de ce qui ne va pas."
     - "L'audit est gratuit et sans engagement : l'établissement repart avec un état des lieux clair, quoi qu'il décide."
     - "Il porte à la fois sur les coûts, factures et abonnements, et sur la technique, qualité, pannes, couverture DECT."
     - "La démarche est simple : une rencontre sur place, le point sur l'installation, puis un compte rendu avec les points techniques à surveiller."
@@ -42,16 +52,22 @@ offre:
     - "OpteoLink travaille avec des EHPAD, des cliniques, des cabinets médicaux et des mairies du Sud-Ouest."
 
 accroche: >-
-  OpteoLink est une entreprise télécom locale, basée à Toulouse. Nous proposons aux EHPAD
-  un audit technique et financier gratuit de leurs télécoms. Plusieurs établissements comme
-  le vôtre ont déjà fait de belles économies, et ils en sont très contents. Je voulais
-  savoir comment cela se passe chez vous aujourd'hui.
+  OpteoLink est une entreprise télécom locale, basée à Toulouse. Dans beaucoup d'EHPAD,
+  la téléphonie et les télécoms ont évolué petit à petit, les équipes ont changé, et on
+  finit par ne plus très bien savoir ce qu'on a ni ce qu'on paie. Nous proposons un audit
+  technique et financier gratuit pour remettre tout ça à plat. Plusieurs établissements
+  comme le vôtre ont déjà fait de belles économies. Je voulais savoir comment cela se passe
+  chez vous aujourd'hui.
 
 qualification:
+  - id: maitrise
+    question: "Aujourd'hui, qui s'occupe des télécoms chez vous, et avez-vous une vue claire de tout ce qui est installé et de ce que vous payez ?"
+    but: "Qui gère (directeur, agent technique, siège), depuis quand, et niveau de maîtrise de l'installation. Un changement récent d'équipe est un bon signal."
+    obligatoire: true
   - id: operateurs
     question: "Aujourd'hui, qui sont vos opérateurs pour la téléphonie, internet et les mobiles ?"
     but: "Opérateurs actuels : fixe, internet, mobiles."
-    obligatoire: true
+    obligatoire: false
   - id: systeme_telephonique
     question: "Quel système téléphonique avez-vous en place, et qui est votre intégrateur, la société qui l'installe et le maintient ?"
     but: "Marque et âge du standard, DECT ou IP, intégrateur ou mainteneur actuel."
@@ -78,8 +94,8 @@ qualification:
 objections:
   - objection: "On a déjà un prestataire."
     reponse: >-
-      C'est très bien, et l'audit ne vous engage pas à changer. Il permet simplement de
-      vérifier que vous payez le juste prix et que tout fonctionne comme il faut.
+      C'est très bien, et l'audit ne vous engage pas à changer. C'est un regard extérieur,
+      offert, pour vérifier que vous payez le juste prix et que tout fonctionne comme il faut.
   - objection: "On n'a pas de budget."
     reponse: >-
       Je comprends tout à fait. Justement, l'audit est gratuit, et son but est de vous faire
@@ -104,8 +120,17 @@ objections:
       préférez. Quel moment vous conviendrait ?
   - objection: "Ça fonctionne très bien chez nous, on n'a besoin de rien."
     reponse: >-
-      Tant mieux, c'est l'essentiel. L'audit sert aussi à le confirmer, et à vérifier que
-      vous ne payez pas plus que nécessaire. Cela ne vous coûte rien.
+      Tant mieux, c'est l'essentiel. Souvent, l'installation a évolué au fil des années et
+      des changements d'équipe : l'audit permet de garder une vue d'ensemble à jour, et de
+      vérifier que vous ne payez pas plus que nécessaire. Cela ne vous coûte rien.
+  - objection: "Je viens d'arriver, je ne connais pas encore bien l'installation."
+    reponse: >-
+      C'est justement le bon moment. L'audit vous donne en une visite une vue claire de ce qui
+      est en place, de ce que vous payez et de qui intervient. C'est gratuit.
+  - objection: "Il faudrait voir avec notre agent technique."
+    reponse: >-
+      Bien sûr, il est le bienvenu au rendez-vous. Ses connaissances du terrain sont précieuses,
+      et l'audit peut aussi l'aider à y voir plus clair. Pouvez-vous me donner son nom ?
   - objection: "On est engagés avec notre opérateur."
     reponse: >-
       Je comprends. L'audit est utile justement avant la fin d'un engagement, pour préparer
@@ -120,7 +145,7 @@ objections:
 
 scoring:
   chaud: "Insatisfaction exprimée, coûts jugés trop élevés, pannes, ou engagement qui se termine dans les douze mois, et accord pour un rendez-vous d'audit."
-  tiede: "Intérêt poli pour l'audit sans urgence, rappel accepté, ou échéance au-delà de douze mois."
+  tiede: "Intérêt poli pour l'audit sans urgence, nouveau directeur ou nouvel agent technique qui découvre l'installation, rappel accepté, ou échéance au-delà de douze mois."
   froid: "Satisfait et peu ouvert, décision ailleurs sans contact transmis, ou refus."
 
 mots_cles_stt:
