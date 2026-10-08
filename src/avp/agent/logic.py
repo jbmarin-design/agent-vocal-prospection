@@ -72,6 +72,7 @@ class CallUserData:
     usage: dict[str, Any] = field(default_factory=dict)
     # Pendant le « Allô ? » : levé dès que l'interlocuteur parle (voir worker._probe_presence).
     presence_event: asyncio.Event | None = None
+    presence_text: str = ""
 
     @property
     def prospect(self) -> Prospect:
@@ -117,6 +118,23 @@ def outcome_from_amd(category: str) -> CallOutcome | None:
 
 
 PRESENCE_PROMPTS: tuple[str, ...] = ("Allô ?", "Allô, vous m'entendez ?")
+
+# Formules typiques des messageries vocales françaises (opérateurs et annonces personnalisées).
+_VOICEMAIL_PATTERNS = (
+    r"messagerie", r"r[ée]pondeur", r"bo[iî]te vocale", r"laiss\w* (?:un |votre )?message",
+    r"apr[eè]s le (?:bip|signal|top)", r"au (?:bip|signal) sonore", r"(?:n'est|ne suis|sommes) pas disponible",
+    r"(?:est|suis|sommes) (?:actuellement )?(?:absent|indisponible|en ligne|en communication)",
+    r"rappeler ult[ée]rieurement", r"votre correspondant", r"le num[ée]ro (?:que vous avez compos[ée]|demand[ée])",
+    r"(?:nos|les) (?:bureaux|horaires) (?:sont|d'ouverture)", r"tapez \d", r"appuyez sur",
+)
+
+
+def looks_like_voicemail(text: str) -> bool:
+    """Vrai si la transcription ressemble à une messagerie ou à un serveur vocal."""
+    import re
+
+    t = (text or "").lower()
+    return any(re.search(p, t) for p in _VOICEMAIL_PATTERNS)
 
 
 def is_silent_pickup(category: str, reason: str, transcript: str) -> bool:

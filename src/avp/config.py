@@ -59,7 +59,7 @@ class Settings(BaseSettings):
     cartesia_model: str = "sonic-3"
     cartesia_voice_id: str = ""
     tts_speed: float | None = Field(
-        default=None, ge=0.6, le=2.0, description="Débit de la voix (Cartesia sonic-3) : 1.0 normal, 1.1-1.2 plus rapide"
+        default=None, ge=0.6, le=2.0, description="Débit de la voix (Cartesia sonic-3) : 1.0 normal, 0.9 posé, >1.05 vite trop rapide"
     )
     elevenlabs_api_key: str = ""
     elevenlabs_model: str = "eleven_flash_v2_5"

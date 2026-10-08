@@ -28,6 +28,7 @@ from .logic import (
     CallUserData,
     coerce_outcome,
     looks_like_email,
+    looks_like_voicemail,
     match_slot,
     parse_tool_datetime,
     question_ids,
@@ -144,11 +145,22 @@ class AgentAccueil(_BaseProspectAgent):
     role = "accueil"
 
     async def on_user_turn_completed(self, turn_ctx, new_message) -> None:
+        ud = self._ud
+        text = getattr(new_message, "text_content", "") or ""
         # Réponse au « Allô ? » de vérification : on la note, sans réponse du LLM
-        # (le worker enchaîne avec la phrase d'ouverture fixe).
-        ev = self._ud.presence_event
+        # (le worker décide ensuite : phrase d'ouverture, ou messagerie).
+        ev = ud.presence_event
         if ev is not None and not ev.is_set():
+            ud.presence_text = text
             ev.set()
+            raise StopResponse()
+        # Filet de sécurité : messagerie ou serveur vocal non détecté par l'AMD.
+        if not ud.state.decision_maker_reached and looks_like_voicemail(text) and not ud.hangup_requested:
+            logger.info("messagerie détectée dans la transcription : %s", text[:120])
+            ud.state.outcome = CallOutcome.REPONDEUR
+            ud.state.amd_result = ud.state.amd_result or "machine-vm"
+            ud.note("messagerie détectée en cours d'appel (annonce reconnue)")
+            _spawn(hang_up(ud, "messagerie détectée", wait_s=0.3))
             raise StopResponse()
 
     @function_tool

@@ -198,3 +198,19 @@ def test_is_silent_pickup():
     assert not logic.is_silent_pickup("uncertain", "llm", "Allô oui ?")
     assert not logic.is_silent_pickup("human", "short_greeting", "")
     assert logic.PRESENCE_PROMPTS[0] == "Allô ?"
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("Bonjour, vous êtes bien sur la messagerie de Jean-Baptiste, laissez un message après le bip.", True),
+        ("Votre correspondant n'est pas disponible pour le moment.", True),
+        ("EHPAD Les Tilleuls, nos bureaux sont ouverts du lundi au vendredi, tapez 1 pour l'accueil.", True),
+        ("Je suis absent, rappelez ultérieurement.", True),
+        ("Allô oui ?", False),
+        ("EHPAD Les Tilleuls bonjour, c'est à quel sujet ?", False),
+        ("La directrice est en réunion, rappelez jeudi.", False),
+    ],
+)
+def test_looks_like_voicemail(text, expected):
+    assert logic.looks_like_voicemail(text) is expected

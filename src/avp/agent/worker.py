@@ -45,6 +45,7 @@ from .logic import (
     finalize_call,
     history_to_transcript,
     is_silent_pickup,
+    looks_like_voicemail,
     outcome_from_amd,
     should_leave_voicemail,
 )
@@ -280,6 +281,13 @@ async def entrypoint(ctx: JobContext) -> None:
                 ud.state.outcome = CallOutcome.NON_DECROCHE
                 ud.note("ligne silencieuse : aucune réponse aux « Allô ? »")
                 await hang_up(ud, "ligne silencieuse", wait_s=0.5)
+                return
+            if looks_like_voicemail(ud.presence_text):
+                # Messagerie qui démarre tard (après le délai de silence) : on ne déroule pas le discours.
+                ud.state.outcome = CallOutcome.REPONDEUR
+                ud.state.amd_result = "machine-vm"
+                ud.note("messagerie reconnue après « Allô ? »")
+                await hang_up(ud, "messagerie", wait_s=0.3)
                 return
         session.say(opening_line(campaign, meta.prospect), allow_interruptions=False)
         return  # la conversation se déroule ; la fin passe par les outils ou les garde-fous
