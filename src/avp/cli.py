@@ -665,6 +665,21 @@ def cmd_calls(args: argparse.Namespace) -> int:
     s = _settings()
     _ensure_db(s)
     tz = ZoneInfo(s.timezone)
+    if args.calls_cmd == "hangup":
+        lk = load_module("livekit_admin")
+        if args.all:
+            rooms = asyncio.run(lk.list_active_rooms(settings=s))
+        elif args.call_id:
+            rooms = [lk.room_name_for(args.call_id)]
+        else:
+            raise CliError("préciser un identifiant d'appel, ou --all")
+        if not rooms:
+            _out("Aucun appel en cours.")
+            return 0
+        for room in rooms:
+            asyncio.run(lk.hangup_room(room, settings=s))
+            _out(f"Raccroché : {room}")
+        return 0
     if args.calls_cmd == "list":
         with db.connect(s.db_path) as c:
             q = "SELECT c.*, p.name pname FROM calls c LEFT JOIN prospects p ON p.id=c.prospect_id"
@@ -969,6 +984,9 @@ def build_parser() -> argparse.ArgumentParser:
     x.add_argument("--campaign", help="filtrer sur une campagne")
     x = _sub(lsp, "show", "détail d'un appel et transcription")
     x.add_argument("call_id")
+    x = _sub(lsp, "hangup", "raccroche un appel en cours (ou tous avec --all)")
+    x.add_argument("call_id", nargs="?", help="identifiant de l'appel (voir `avp calls list`)")
+    x.add_argument("--all", action="store_true", help="raccrocher tous les appels en cours")
 
     p = _sub(sp, "optout", "liste d'opposition (ne plus appeler)", cmd_optout)
     osp = p.add_subparsers(parser_class=_FrenchArgumentParser, dest="optout_cmd", metavar="<action>", required=True)
