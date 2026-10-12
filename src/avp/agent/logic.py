@@ -75,6 +75,7 @@ class CallUserData:
     # Pendant le « Allô ? » : levé dès que l'interlocuteur parle (voir worker._probe_presence).
     presence_event: asyncio.Event | None = None
     presence_text: str = ""
+    user_turns: int = 0  # tours de parole du prospect (fenêtre de détection de messagerie)
 
     @property
     def prospect(self) -> Prospect:
@@ -122,21 +123,34 @@ def outcome_from_amd(category: str) -> CallOutcome | None:
 PRESENCE_PROMPTS: tuple[str, ...] = ("Allô ?", "Allô, vous m'entendez ?")
 
 # Formules typiques des messageries vocales françaises (opérateurs et annonces personnalisées).
+# Formules propres aux messageries et serveurs vocaux. Volontairement strictes : une secrétaire
+# dit aussi « il n'est pas disponible, rappelez plus tard » — ces formules-là ne suffisent JAMAIS.
 _VOICEMAIL_PATTERNS = (
-    r"messagerie", r"r[ée]pondeur", r"bo[iî]te vocale", r"laiss\w* (?:un |votre )?message",
-    r"apr[eè]s le (?:bip|signal|top)", r"au (?:bip|signal) sonore", r"(?:n'est|ne suis|sommes) pas disponible",
-    r"(?:est|suis|sommes) (?:actuellement )?(?:absent|indisponible|en ligne|en communication)",
-    r"rappeler ult[ée]rieurement", r"votre correspondant", r"le num[ée]ro (?:que vous avez compos[ée]|demand[ée])",
-    r"(?:nos|les) (?:bureaux|horaires) (?:sont|d'ouverture)", r"tapez \d", r"appuyez sur",
+    r"messagerie", r"r[ée]pondeur", r"bo[iî]te vocale",
+    r"laissez(?:-moi|-nous)? (?:un |votre )?message",  # impératif d'annonce (pas « lui laisser un message »)
+    r"apr[eè]s le (?:bip|signal|top)", r"au (?:bip|signal) sonore",
+    r"votre correspondant", r"le num[ée]ro (?:que vous avez compos[ée]|demand[ée]|de votre correspondant)",
+    r"n'est (?:plus )?attribu[ée]", r"(?:tapez|appuyez sur|faites le) (?:le )?(?:\d|un|deux|trois|quatre|z[ée]ro|di[èe]se|étoile)",
 )
+# Au-delà, une réponse n'est plus une annonce de messagerie mais une conversation.
+VOICEMAIL_WINDOW_S = 25.0
+VOICEMAIL_WINDOW_TURNS = 2
 
 
 def looks_like_voicemail(text: str) -> bool:
-    """Vrai si la transcription ressemble à une messagerie ou à un serveur vocal."""
+    """Vrai si la transcription contient une formule typique de messagerie ou de serveur vocal."""
     import re
 
     t = (text or "").lower()
     return any(re.search(p, t) for p in _VOICEMAIL_PATTERNS)
+
+
+def voicemail_window_open(answered_at: datetime | None, now: datetime, user_turns: int) -> bool:
+    """La détection par la transcription ne joue qu'au tout début de l'appel (annonce d'accueil),
+    jamais au milieu d'un échange avec une secrétaire."""
+    if user_turns > VOICEMAIL_WINDOW_TURNS:
+        return False
+    return answered_at is None or (now - answered_at).total_seconds() <= VOICEMAIL_WINDOW_S
 
 
 def is_silent_pickup(category: str, reason: str, transcript: str) -> bool:

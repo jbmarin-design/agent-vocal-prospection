@@ -33,6 +33,7 @@ from .logic import (
     merge_contact,
     parse_tool_datetime,
     question_ids,
+    voicemail_window_open,
 )
 
 logger = logging.getLogger("avp.agent")
@@ -139,7 +140,12 @@ class _BaseProspectAgent(Agent):
         if personne and not ud.state.contact_name:
             ud.state.contact_name = personne.strip()
         logger.info("rappel noté : %s (%s)", moment, when)
-        return "Rappel noté. Remerciez, dites au revoir, puis appelez terminer_appel avec l'issue rappel."
+        return (
+            "Rappel noté. Avant de conclure, si vous ne les avez pas encore, obtenez au minimum le nom de la "
+            "personne à demander, une ligne directe ou un email, et ses jours ou heures de présence : une "
+            "question à la fois, notez-les avec noter_contact, sans insister si on refuse. Ensuite seulement, "
+            "remerciez, dites au revoir et appelez terminer_appel avec l'issue rappel."
+        )
 
     @function_tool
     async def noter_contact(
@@ -208,7 +214,13 @@ class AgentAccueil(_BaseProspectAgent):
             ev.set()
             raise StopResponse()
         # Filet de sécurité : messagerie ou serveur vocal non détecté par l'AMD.
-        if not ud.state.decision_maker_reached and looks_like_voicemail(text) and not ud.hangup_requested:
+        ud.user_turns += 1
+        if (
+            not ud.state.decision_maker_reached
+            and not ud.hangup_requested
+            and voicemail_window_open(ud.answered_at, datetime.now(UTC), ud.user_turns)
+            and looks_like_voicemail(text)
+        ):
             logger.info("messagerie détectée dans la transcription : %s", text[:120])
             ud.state.outcome = CallOutcome.REPONDEUR
             ud.state.amd_result = ud.state.amd_result or "machine-vm"

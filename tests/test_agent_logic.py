@@ -206,7 +206,12 @@ def test_is_silent_pickup():
         ("Bonjour, vous êtes bien sur la messagerie de Jean-Baptiste, laissez un message après le bip.", True),
         ("Votre correspondant n'est pas disponible pour le moment.", True),
         ("EHPAD Les Tilleuls, nos bureaux sont ouverts du lundi au vendredi, tapez 1 pour l'accueil.", True),
-        ("Je suis absent, rappelez ultérieurement.", True),
+        ("Je suis absent, laissez-moi un message et je vous rappelle.", True),
+        # Barrage de secrétariat : ne doit JAMAIS passer pour une messagerie
+        ("Non, elle n'est pas disponible, il faut rappeler plus tard.", False),
+        ("Le directeur est absent cette semaine, rappelez ultérieurement.", False),
+        ("Vous voulez lui laisser un message ?", False),
+        ("Nos bureaux sont fermés le mercredi après-midi.", False),
         ("Allô oui ?", False),
         ("EHPAD Les Tilleuls bonjour, c'est à quel sujet ?", False),
         ("La directrice est en réunion, rappelez jeudi.", False),
@@ -271,3 +276,10 @@ def test_finalize_enrichit_la_fiche_prospect(tmp_path, make_campaign):
     row = db.get_prospect_row(pid, settings.db_path)
     assert row["contact_name"] == "Claire Martin" and row["contact_role"] == "directrice"
     assert "dispo : le mardi matin" in row["notes"]
+
+
+def test_voicemail_window_open():
+    t0 = datetime(2026, 10, 12, 8, 0, tzinfo=UTC)
+    assert logic.voicemail_window_open(t0, t0 + timedelta(seconds=10), 1)
+    assert not logic.voicemail_window_open(t0, t0 + timedelta(seconds=40), 1)
+    assert not logic.voicemail_window_open(t0, t0 + timedelta(seconds=5), 3)
