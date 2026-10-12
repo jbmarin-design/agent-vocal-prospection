@@ -141,10 +141,10 @@ class _BaseProspectAgent(Agent):
             ud.state.contact_name = personne.strip()
         logger.info("rappel noté : %s (%s)", moment, when)
         return (
-            "Rappel noté. Avant de conclure, si vous ne les avez pas encore, obtenez au minimum le nom de la "
-            "personne à demander, une ligne directe ou un email, et ses jours ou heures de présence : une "
-            "question à la fois, notez-les avec noter_contact, sans insister si on refuse. Ensuite seulement, "
-            "remerciez, dites au revoir et appelez terminer_appel avec l'issue rappel."
+            "Rappel noté. Si vous n'avez pas encore le nom de la personne, un moyen de la joindre et ses "
+            "disponibilités, demandez tout ce qui manque en UNE seule question groupée, notez la réponse avec "
+            "noter_contact sans relancer. Puis remerciez, dites au revoir et appelez terminer_appel avec "
+            "l'issue rappel."
         )
 
     @function_tool
