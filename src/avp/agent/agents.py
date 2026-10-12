@@ -123,9 +123,11 @@ class _BaseProspectAgent(Agent):
     @function_tool
     async def noter_rappel(
         self, context: RunContext[CallUserData], moment: str, personne: str = "", date_iso: str = ""
-    ) -> str:
+    ) -> None:
         """Enregistre un rappel convenu avec l'interlocuteur (la personne recherchée est absente,
-        occupée, ou préfère être rappelée), ou une demande d'envoi d'information.
+        occupée, ou préfère être rappelée), ou une demande d'envoi d'information. Outil silencieux :
+        dites votre phrase dans la même réponse (question groupée sur les coordonnées s'il en manque,
+        ou remerciements), jamais l'outil seul.
 
         Args:
             moment: Le moment convenu, en clair, tel que dit par l'interlocuteur (ex. « jeudi après-midi », « après le 15 »). Peut aussi contenir une ligne directe ou un email donné.
@@ -140,12 +142,9 @@ class _BaseProspectAgent(Agent):
         if personne and not ud.state.contact_name:
             ud.state.contact_name = personne.strip()
         logger.info("rappel noté : %s (%s)", moment, when)
-        return (
-            "Rappel noté. Si vous n'avez pas encore le nom de la personne, un moyen de la joindre et ses "
-            "disponibilités, demandez tout ce qui manque en UNE seule question groupée, notez la réponse avec "
-            "noter_contact sans relancer. Puis remerciez, dites au revoir et appelez terminer_appel avec "
-            "l'issue rappel."
-        )
+        # Outil silencieux : pas de second appel à Claude (≈ 1 à 2 s gagnées).
+        _spawn(_ensure_reply(context.session))
+        return None
 
     @function_tool
     async def noter_contact(

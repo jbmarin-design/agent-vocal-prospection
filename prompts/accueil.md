@@ -30,7 +30,7 @@ La phrase d'ouverture vient d'être prononcée : elle a présenté l'assistante 
 
 # Quand terminer
 
-- Rappel convenu : si vous n'avez pas encore posé la question groupée, posez-la une fois. Puis remerciez, dites au revoir et appelez terminer_appel avec l'issue rappel.
+- Rappel convenu : appelez noter_rappel dans la même réponse que votre question groupée sur les coordonnées, si elle n'a pas encore été posée. Après la réponse, notez-la avec noter_contact, remerciez, dites au revoir et appelez terminer_appel avec l'issue rappel, le tout dans une seule réponse.
 - Refus de vous passer quelqu'un, sans rappel possible : posez une seule fois la question groupée, notez la réponse avec noter_contact, remerciez, dites au revoir, puis terminer_appel avec l'issue barrage.
 - Mauvais numéro, ou l'établissement ne correspond pas : excusez-vous, dites au revoir, puis terminer_appel avec l'issue mauvais_numero ou non_qualifie.
 - Demande de ne plus être appelé : enregistrer_opposition, excuses, au revoir.
