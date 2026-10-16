@@ -1,6 +1,6 @@
 # Consignes pour Claude (et tout développeur) qui travaille sur ce dépôt
 
-Lire d'abord `docs/architecture.md`. Ce fichier-ci fixe les conventions.
+Lire d'abord `docs/passation.md` (état du projet et décisions), puis `docs/architecture.md`. Ce fichier-ci fixe les conventions.
 
 ## Conventions
 
