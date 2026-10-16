@@ -145,6 +145,27 @@ def looks_like_voicemail(text: str) -> bool:
     return any(re.search(p, t) for p in _VOICEMAIL_PATTERNS)
 
 
+_GOODBYE_PATTERNS = (
+    r"au revoir",
+    r"bonne (?:fin de )?(?:journ[ée]e|soir[ée]e|semaine)",
+    r"bon (?:apr[eè]s-midi|week-end|weekend)",
+)
+GOODBYE_TAIL_CHARS = 80
+GOODBYE_GRACE_S = 3.0
+
+
+def is_goodbye(text: str) -> bool:
+    """Vrai si la réplique de l'agent se termine par une formule d'au revoir.
+
+    Seule la fin de la réplique compte : « bonne journée » glissé en milieu de phrase ne vaut pas
+    fin d'appel. Sert au raccrochage de secours quand Claude salue sans appeler terminer_appel.
+    """
+    import re
+
+    tail = (text or "").strip().lower()[-GOODBYE_TAIL_CHARS:]
+    return any(re.search(p, tail) for p in _GOODBYE_PATTERNS)
+
+
 def voicemail_window_open(answered_at: datetime | None, now: datetime, user_turns: int) -> bool:
     """La détection par la transcription ne joue qu'au tout début de l'appel (annonce d'accueil),
     jamais au milieu d'un échange avec une secrétaire."""

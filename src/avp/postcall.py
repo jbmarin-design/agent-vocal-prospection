@@ -2,8 +2,10 @@
 
 Chaîne : `process_pending` → `process_call` → `analyze_call` (LLM) → `sync_axonaut` (CRM).
 
-- L'analyse utilise un outil **forcé** (`tool_choice`) dont le schéma d'entrée est celui de
-  `CallAnalysis` : la sortie est donc du JSON structuré, validé par Pydantic (un réessai si invalide).
+- L'analyse passe par un outil dont le schéma d'entrée est celui de `CallAnalysis` : la sortie est
+  donc du JSON structuré, validé par Pydantic (un réessai si invalide ou si l'outil n'est pas appelé).
+  `tool_choice` reste en `auto` : Sonnet 5.5 refuse l'outil forcé (`tool`/`any`, erreur 400) ;
+  c'est le prompt système qui exige l'appel de l'outil.
 - Aucune dépendance LiveKit ; `anthropic` n'est importé que si aucun client n'est injecté.
 - La synchronisation Axonaut n'est **jamais** rejouée automatiquement (pour éviter les doublons
   d'événements) : en cas d'erreur partielle, `calls.axonaut_synced=0` et `calls.error` décrit le problème.
@@ -282,7 +284,7 @@ async def analyze_call(
                 max_tokens=MAX_TOKENS,
                 system=system,
                 tools=[tool],
-                tool_choice={"type": "tool", "name": ANALYSIS_TOOL_NAME},
+                tool_choice={"type": "auto"},  # outil forcé refusé par Sonnet 5.5 (400)
                 messages=messages,
             )
             block = _find_tool_use(response)

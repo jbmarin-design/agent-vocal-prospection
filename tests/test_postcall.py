@@ -155,7 +155,7 @@ async def test_analyze_call_success(tmp_path: Path):
     assert res.date_relance is not None and res.date_relance.utcoffset() == timedelta(hours=1)
     call = llm.messages.calls[0]
     assert call["model"] == st.llm_analysis_model
-    assert call["tool_choice"] == {"type": "tool", "name": ANALYSIS_TOOL_NAME}
+    assert call["tool_choice"] == {"type": "auto"}  # Sonnet 5.5 refuse l'outil forcé
     assert call["tools"][0]["input_schema"] == CallAnalysis.model_json_schema()
     assert "analyste commercial" in call["system"] and "Combien de lits" in call["system"]
     user = call["messages"][0]["content"]

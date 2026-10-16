@@ -283,3 +283,18 @@ def test_voicemail_window_open():
     assert logic.voicemail_window_open(t0, t0 + timedelta(seconds=10), 1)
     assert not logic.voicemail_window_open(t0, t0 + timedelta(seconds=40), 1)
     assert not logic.voicemail_window_open(t0, t0 + timedelta(seconds=5), 3)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Parfait, merci beaucoup. Jean-Baptiste la recontactera mercredi après-midi.\n\nAu revoir !", True),
+        ("Merci pour votre aide, bonne fin de journée.", True),
+        ("Très bien, je vous souhaite un bon après-midi.", True),
+        ("Pourriez-vous me donner son nom, une ligne directe ou son email ?", False),
+        ("Bonne journée à vous aussi ! Au fait, qui s'occupe de la partie technique chez vous ?", False),
+        ("", False),
+    ],
+)
+def test_is_goodbye(text, expected):
+    assert logic.is_goodbye(text) is expected

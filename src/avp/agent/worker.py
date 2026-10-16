@@ -37,6 +37,7 @@ from ..models import CallMetadata, CallOutcome
 from ..prompts import opening_line, prompt_version
 from .agents import AgentAccueil, AgentRepondeur, hang_up
 from .logic import (
+    GOODBYE_GRACE_S,
     PRESENCE_PROMPTS,
     CallUserData,
     classify_sip_failure,
@@ -45,6 +46,7 @@ from .logic import (
     finalize_call,
     format_latency,
     history_to_transcript,
+    is_goodbye,
     is_silent_pickup,
     looks_like_voicemail,
     outcome_from_amd,
@@ -187,6 +189,25 @@ async def entrypoint(ctx: JobContext) -> None:
         summary = format_latency(getattr(item, "role", ""), getattr(item, "metrics", None))
         if summary:
             logger.info("latence %s : %s", "prospect" if item.role == "user" else "agent", summary)
+        # Filet de sécurité : l'agent a dit au revoir mais n'a pas appelé terminer_appel.
+        if (
+            getattr(item, "role", "") == "assistant"
+            and not ud.hangup_requested
+            and is_goodbye(getattr(item, "text_content", "") or "")
+        ):
+            tasks.append(asyncio.create_task(_goodbye_guard(item)))
+
+    async def _goodbye_guard(goodbye_item) -> None:
+        """Raccroche si, quelques secondes après l'au revoir, rien n'a relancé l'échange."""
+        await asyncio.sleep(GOODBYE_GRACE_S)
+        if ud.hangup_requested or session.user_state == "speaking" or session.agent_state == "speaking":
+            return
+        msgs = [i for i in session.history.items if getattr(i, "type", "") == "message"]
+        if msgs and msgs[-1] is not goodbye_item:
+            return  # le prospect a repris la parole : la conversation continue
+        logger.info("au revoir sans terminer_appel : raccrochage de secours")
+        ud.note("raccrochage de secours (au revoir sans terminer_appel)")
+        await hang_up(ud, "au revoir sans terminer_appel")
 
     @session.on("close")
     def _on_close(ev) -> None:
