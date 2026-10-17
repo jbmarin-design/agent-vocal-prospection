@@ -328,3 +328,25 @@ def test_is_closing_remark(text, expected):
 def test_ends_with_question():
     assert logic.ends_with_question("Quels sont ses jours de présence ? ")
     assert not logic.ends_with_question("Merci à vous, je transmets à Jean-Baptiste.")
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "C'est à quel sujet ?",
+        "Vous êtes un robot",
+        "Oui.",
+        "Allô ?",
+        "Ok super merci.",
+        "",
+    ],
+)
+def test_pas_d_acquiescement(text):
+    assert logic.pick_acknowledgement(text) is None
+
+
+def test_acquiescement_varie():
+    first = logic.pick_acknowledgement("Elle n'est pas disponible aujourd'hui.", choice=lambda xs: xs[0])
+    assert first == logic.ACKNOWLEDGEMENTS[0]
+    second = logic.pick_acknowledgement("Elle sera là jeudi matin.", first, choice=lambda xs: xs[0])
+    assert second and second != first

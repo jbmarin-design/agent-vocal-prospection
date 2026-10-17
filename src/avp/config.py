@@ -85,6 +85,8 @@ class Settings(BaseSettings):
     max_call_duration_s: int = 360
     ring_timeout_s: int = 40
     silence_timeout_s: int = 20
+    # Court « D'accord. » dit dès la fin de la phrase du prospect, pendant que Claude prépare la suite.
+    acquiescements: bool = True
     max_concurrent_calls: int = 2
     amd_silence_s: float = Field(default=2.5, description="Silence au décroché avant de dire « Allô ? » (s)")
     presence_wait_s: float = Field(default=4.0, description="Attente d'une réponse après chaque « Allô ? » (s)")

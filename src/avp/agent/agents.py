@@ -35,6 +35,7 @@ from .logic import (
     looks_like_email,
     looks_like_voicemail,
     match_slot,
+    pick_acknowledgement,
     voicemail_window_open,
 )
 
@@ -132,6 +133,20 @@ class _BaseProspectAgent(Agent):
         if self.role not in self._ud.state.agent_path:
             self._ud.state.agent_path.append(self.role)
 
+    async def on_user_turn_completed(self, turn_ctx, new_message) -> None:
+        """Acquiescement immédiat (« D'accord. ») pendant que Claude prépare sa réponse.
+
+        Dit avant la réponse (file de parole de la session), hors historique : Claude ne le voit pas
+        et prompts/base.md lui demande de ne pas commencer lui-même par un acquiescement.
+        """
+        ud = self._ud
+        if not ud.settings.acquiescements or ud.hangup_requested or ud.closing:
+            return
+        ack = pick_acknowledgement(getattr(new_message, "text_content", "") or "", ud.last_ack)
+        if ack:
+            ud.last_ack = ack
+            self.session.say(ack, allow_interruptions=True, add_to_chat_ctx=False)
+
     # -- Outils communs ------------------------------------------------------
 
     @function_tool
@@ -180,6 +195,7 @@ class AgentAccueil(_BaseProspectAgent):
             ud.note("messagerie détectée en cours d'appel (annonce reconnue)")
             _spawn(hang_up(ud, "messagerie détectée", wait_s=0.3))
             raise StopResponse()
+        await super().on_user_turn_completed(turn_ctx, new_message)
 
     @function_tool
     async def passer_au_decideur(

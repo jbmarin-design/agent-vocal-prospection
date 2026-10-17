@@ -71,6 +71,7 @@ class CallUserData:
     proposed_slots: list[datetime] = field(default_factory=list)
     hangup_requested: bool = False
     closing: bool = False  # au revoir final en cours (finish_call)
+    last_ack: str = ""  # dernier acquiescement dit (pour varier)
     finalized: bool = False
     usage: dict[str, Any] = field(default_factory=dict)
     # Pendant le « Allô ? » : levé dès que l'interlocuteur parle (voir worker._probe_presence).
@@ -209,6 +210,35 @@ def is_closing_remark(text: str) -> bool:
 def ends_with_question(text: str) -> bool:
     """Vrai si la réplique de l'agent attend une réponse (se termine par une question)."""
     return (text or "").rstrip().endswith("?")
+
+
+ACKNOWLEDGEMENTS: tuple[str, ...] = (
+    "D'accord.", "Très bien.", "Je vois.", "Entendu.", "Ah, d'accord.", "Oui, je comprends.", "Bien sûr.",
+)
+_QUESTION_STARTS = (
+    "qui ", "quoi", "quel", "quelle", "comment", "pourquoi", "combien", "où ", "quand ", "est-ce",
+    "c'est quoi", "c'est qui", "vous êtes", "vous appelez", "c'est à quel", "c'est pour",
+)
+ACK_MIN_WORDS = 3
+
+
+def pick_acknowledgement(user_text: str, previous: str = "", *, choice=None) -> str | None:
+    """Petit acquiescement à dire tout de suite après la phrase du prospect, ou None.
+
+    Il comble l'attente de la réponse de Claude (0,6 à 2 s selon la charge de l'API, 17/10)
+    sans sonner automatique : jamais après une question (on y répond directement), ni après une
+    réplique très courte (« Oui », « Allô ? »), ni après un remerciement de fin ; jamais deux fois
+    la même formule de suite.
+    """
+    import random
+
+    t = (user_text or "").strip().lower()
+    if not t or t.endswith("?") or t.startswith(_QUESTION_STARTS):
+        return None
+    if len(t.split()) < ACK_MIN_WORDS or is_closing_remark(t):
+        return None
+    options = [a for a in ACKNOWLEDGEMENTS if a != previous] or list(ACKNOWLEDGEMENTS)
+    return (choice or random.choice)(options)
 
 
 def voicemail_window_open(answered_at: datetime | None, now: datetime, user_turns: int) -> bool:
