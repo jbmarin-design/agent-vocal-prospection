@@ -275,6 +275,7 @@ async def entrypoint(ctx: JobContext) -> None:
     if console:
         ud.answered_at = datetime.now(UTC)
         ud.state.amd_result = "human"
+        ud.opening_done = True
         session.say(opening_line(campaign, meta.prospect), allow_interruptions=False)
         tasks.append(asyncio.create_task(_duration_guard(ud, session)))
         return
@@ -374,6 +375,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 ud.note("messagerie reconnue après « Allô ? »")
                 await hang_up(ud, "messagerie", wait_s=0.3)
                 return
+        ud.opening_done = True
         session.say(opening_line(campaign, meta.prospect), allow_interruptions=False)
         return  # la conversation se déroule ; la fin passe par les outils ou les garde-fous
 

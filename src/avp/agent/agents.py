@@ -195,6 +195,10 @@ class AgentAccueil(_BaseProspectAgent):
             ud.note("messagerie détectée en cours d'appel (annonce reconnue)")
             _spawn(hang_up(ud, "messagerie détectée", wait_s=0.3))
             raise StopResponse()
+        # « Allô ? » du prospect pendant que l'AMD décide : la phrase d'ouverture fixe va y répondre.
+        # Sans cela, Claude répondait avant elle (test du 17/10, 18 h 17).
+        if not ud.opening_done:
+            raise StopResponse()
         await super().on_user_turn_completed(turn_ctx, new_message)
 
     @function_tool

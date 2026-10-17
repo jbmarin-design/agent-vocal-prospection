@@ -72,6 +72,7 @@ class CallUserData:
     hangup_requested: bool = False
     closing: bool = False  # au revoir final en cours (finish_call)
     last_ack: str = ""  # dernier acquiescement dit (pour varier)
+    opening_done: bool = False  # phrase d'ouverture lancée : avant, Claude ne répond à rien
     finalized: bool = False
     usage: dict[str, Any] = field(default_factory=dict)
     # Pendant le « Allô ? » : levé dès que l'interlocuteur parle (voir worker._probe_presence).
