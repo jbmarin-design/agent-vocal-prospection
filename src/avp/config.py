@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     # --- IA ------------------------------------------------------------------
     anthropic_api_key: str = ""
     llm_realtime_model: str = "claude-haiku-4-5-20251001"
+    # Claude Haiku 5.5 et suivants uniquement (ignorés sur Haiku 4.5) : réflexion et effort.
+    llm_realtime_thinking: Literal["disabled", "adaptive"] = "disabled"
+    llm_realtime_effort: Literal["low", "medium", "high"] = "low"
     llm_analysis_model: str = "claude-sonnet-5-5"
     stt_provider: Literal["deepgram", "cartesia"] = "deepgram"
     deepgram_api_key: str = ""

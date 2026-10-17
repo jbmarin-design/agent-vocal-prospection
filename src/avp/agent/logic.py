@@ -145,6 +145,24 @@ def looks_like_voicemail(text: str) -> bool:
     return any(re.search(p, t) for p in _VOICEMAIL_PATTERNS)
 
 
+def realtime_llm_options(settings: Settings) -> dict[str, Any]:
+    """Paramètres du LLM de conversation selon le modèle.
+
+    Haiku 4.5 : température 0,4, pas de réflexion. Haiku 5.5 et suivants refusent toute température
+    (erreur 400) et réfléchissent par défaut, ce qui retarde le 1er mot : on coupe la réflexion
+    (`LLM_REALTIME_THINKING`) et on règle l'effort (`LLM_REALTIME_EFFORT`), passés tels quels dans
+    le corps de la requête.
+    """
+    if settings.llm_realtime_model.startswith(("claude-haiku-4", "claude-3")):
+        return {"temperature": 0.4}
+    return {
+        "extra_body": {
+            "thinking": {"type": settings.llm_realtime_thinking},
+            "output_config": {"effort": settings.llm_realtime_effort},
+        }
+    }
+
+
 _GOODBYE_PATTERNS = (
     r"au revoir",
     r"bonne (?:fin de )?(?:journ[ée]e|soir[ée]e|semaine)",

@@ -298,3 +298,13 @@ def test_voicemail_window_open():
 )
 def test_is_goodbye(text, expected):
     assert logic.is_goodbye(text) is expected
+
+
+def test_realtime_llm_options(tmp_path):
+    haiku4 = Settings(_env_file=None, data_dir=tmp_path, llm_realtime_model="claude-haiku-4-5-20251001")
+    assert logic.realtime_llm_options(haiku4) == {"temperature": 0.4}
+    haiku5 = Settings(_env_file=None, data_dir=tmp_path, llm_realtime_model="claude-haiku-5-5")
+    # Haiku 5.5 : aucune température (400), réflexion coupée et effort bas par défaut.
+    assert logic.realtime_llm_options(haiku5) == {
+        "extra_body": {"thinking": {"type": "disabled"}, "output_config": {"effort": "low"}}
+    }

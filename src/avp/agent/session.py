@@ -9,13 +9,14 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from livekit.agents import AgentSession
+from livekit.agents import NOT_GIVEN, AgentSession
+from livekit.agents.utils import is_given
 from livekit.plugins import anthropic, cartesia, deepgram, elevenlabs, silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 from ..config import Settings
 from ..models import Campaign
-from .logic import CallUserData
+from .logic import CallUserData, realtime_llm_options
 
 logger = logging.getLogger("avp.agent.session")
 
@@ -49,13 +50,30 @@ def build_stt(settings: Settings, campaign: Campaign) -> Any:
     return deepgram.STT(**{k: v for k, v in kwargs.items() if v is not None})
 
 
+class _AnthropicLLM(anthropic.LLM):
+    """Plugin Anthropic de LiveKit, avec des champs ajoutés au corps de chaque requête
+    (réflexion, effort) que le plugin ne sait pas transmettre lui-même."""
+
+    def __init__(self, *, extra_body: dict[str, Any] | None = None, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._avp_extra_body = extra_body or {}
+
+    def chat(self, *, extra_kwargs: Any = NOT_GIVEN, **kwargs: Any):  # type: ignore[override]
+        if self._avp_extra_body:
+            merged = dict(extra_kwargs) if is_given(extra_kwargs) else {}
+            merged["extra_body"] = {**(merged.get("extra_body") or {}), **self._avp_extra_body}
+            extra_kwargs = merged
+        return super().chat(extra_kwargs=extra_kwargs, **kwargs)
+
+
 def build_llm(settings: Settings) -> anthropic.LLM:
-    return anthropic.LLM(
+    options = realtime_llm_options(settings)
+    return _AnthropicLLM(
         model=settings.llm_realtime_model,
         api_key=settings.anthropic_api_key or None,
-        temperature=0.4,
         max_tokens=200,  # réponses courtes : moins de texte = voix plus tôt
         caching="ephemeral",
+        **options,
     )
 
 
