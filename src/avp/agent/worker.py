@@ -193,6 +193,19 @@ async def entrypoint(ctx: JobContext) -> None:
 
     ctx.add_shutdown_callback(on_shutdown)
 
+    def _on_llm_metrics(m) -> None:
+        # Diagnostic de latence : le cache de prompt est-il lu ? requêtes anticipées annulées ?
+        if getattr(m, "type", "") != "llm_metrics":
+            return
+        logger.info(
+            "requête LLM : 1er jeton %.2f s, entrée %d jetons dont %d lus en cache et %d écrits%s",
+            m.ttft, m.prompt_tokens, m.prompt_cached_tokens, getattr(m, "cache_creation_tokens", 0),
+            ", annulée" if m.cancelled else "",
+        )
+
+    if session.llm is not None:
+        session.llm.on("metrics_collected", _on_llm_metrics)
+
     @session.on("user_state_changed")
     def _on_user_state(ev) -> None:
         nonlocal away_count
