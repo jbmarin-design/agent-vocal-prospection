@@ -65,12 +65,12 @@ async def hang_up(ud: CallUserData, reason: str, *, wait_s: float = 0.0) -> None
         job.shutdown(reason=reason)
 
 
-async def _ensure_reply(session, *, delay_s: float = 1.2) -> None:
+async def _ensure_reply(session, *, delay_s: float = 0.4) -> None:
     """Filet de sécurité des outils « silencieux » (qui ne relancent pas Claude).
 
     Si Claude a appelé l'outil sans rien dire, l'agent resterait muet : après un court délai,
     si l'agent écoute et que le dernier message de l'historique est encore celui du prospect,
-    on demande une réponse.
+    on demande une réponse. Délai court : avec 1,2 s, le 1er mot arrivait à 2,4 s (test du 17/10).
     """
     await asyncio.sleep(delay_s)
     try:
