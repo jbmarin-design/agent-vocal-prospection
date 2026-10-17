@@ -308,3 +308,23 @@ def test_realtime_llm_options(tmp_path):
     assert logic.realtime_llm_options(haiku5) == {
         "extra_body": {"thinking": {"type": "disabled"}, "output_config": {"effort": "low"}}
     }
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Ok super merci.", True),
+        ("Non merci.", True),
+        ("Au revoir, bonne journée", True),
+        ("Merci, et sinon vous pouvez aussi joindre l'agent technique au zéro six douze trente-quatre", False),
+        ("Elle sera là jeudi matin", False),
+        ("", False),
+    ],
+)
+def test_is_closing_remark(text, expected):
+    assert logic.is_closing_remark(text) is expected
+
+
+def test_ends_with_question():
+    assert logic.ends_with_question("Quels sont ses jours de présence ? ")
+    assert not logic.ends_with_question("Merci à vous, je transmets à Jean-Baptiste.")

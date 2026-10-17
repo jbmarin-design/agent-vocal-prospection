@@ -287,7 +287,7 @@ class CallState(BaseModel):
     contact_name: str = ""
     contact_role: str = ""
     contact_email: str = ""
-    contacts: list[ContactInfo] = Field(default_factory=list)  # personnes recueillies (outil noter_contact)
+    contacts: list[ContactInfo] = Field(default_factory=list)  # personnes recueillies (extraites après l'appel)
     answers: dict[str, str] = Field(default_factory=dict)  # id question → réponse
     rdv: Rdv | None = None
     callback: Callback | None = None
@@ -343,5 +343,13 @@ class CallAnalysis(BaseModel):
     )
     objet_decision: str = Field(default="", description="Ce qui arrive à échéance à date_decision")
     rdv_confirme: bool = False
+    # Extraits de la transcription (l'agent ne les note plus pendant l'appel : cf. postcall.apply_analysis).
+    contacts: list[ContactInfo] = Field(
+        default_factory=list, description="Personnes citées et leurs coordonnées, telles que confirmées"
+    )
+    rappel: Callback | None = Field(default=None, description="Rappel convenu : quand, qui demander")
+    reponses: dict[str, str] = Field(
+        default_factory=dict, description="Identifiant de question de qualification → réponse donnée"
+    )
     qualite_appel: int = Field(default=3, ge=1, le=5, description="Qualité de conduite de l'appel par l'agent")
     suggestions_script: list[str] = Field(default_factory=list)

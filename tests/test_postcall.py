@@ -30,6 +30,7 @@ from avp.postcall import (
     ANALYSIS_TOOL_NAME,
     AnalysisError,
     analyze_call,
+    apply_analysis,
     build_system_prompt,
     process_call,
     process_pending,
@@ -431,3 +432,45 @@ async def test_sync_opposition_ne_cree_pas_de_contact(tmp_path: Path):
     rec = record(CallOutcome.OPPOSITION, optout=True, contacts=[ContactInfo(nom="Martin", fonction="directrice")])
     await sync_axonaut(rec, analysis(), campaign(), axonaut=ax, settings=settings_for(tmp_path))
     assert ax.of("create_employee") == []
+
+
+# ---------------------------------------------------------------------------
+# Extraction post-appel (contacts, rappel, réponses : plus notés pendant l'appel)
+# ---------------------------------------------------------------------------
+
+
+def test_apply_analysis_complete_l_etat_sans_ecraser():
+    st = CallState(outcome=CallOutcome.BARRAGE, answers={"nb_lits": "80"})
+    an = analysis(
+        contacts=[{"prenom": "Isabelle", "nom": "Marin", "fonction": "directrice",
+                   "email": "i.marin@laposte.net", "disponibilites": "le jeudi matin"}],
+        rappel={"when": "2026-10-22T09:00:00+02:00", "ask_for": "Isabelle Marin, directrice", "notes": "jeudi matin"},
+        reponses={"nb_lits": "90", "systeme_appel_malade": "Ascom"},
+        interlocuteur="Mme Durand", fonction="secrétaire",
+    )
+    added = apply_analysis(st, an)
+    assert [c.email for c in st.contacts] == ["i.marin@laposte.net"]
+    assert st.callback is not None and st.callback.ask_for.startswith("Isabelle Marin")
+    assert st.answers == {"nb_lits": "80", "systeme_appel_malade": "Ascom"}  # déjà noté : non écrasé
+    assert st.outcome is CallOutcome.RAPPEL  # issue par défaut corrigée
+    assert st.contact_name == "Mme Durand" and "rappel" in added
+
+
+def test_apply_analysis_garde_le_rappel_et_l_issue_des_outils():
+    cb = Callback(ask_for="M. Durand")
+    st = CallState(outcome=CallOutcome.REFUS, callback=cb)
+    apply_analysis(st, analysis(rappel={"ask_for": "autre"}))
+    assert st.callback is cb and st.outcome is CallOutcome.REFUS
+
+
+async def test_process_call_enregistre_les_extractions(tmp_path: Path):
+    rec = record(CallOutcome.BARRAGE)
+    st, call_id, _ = setup_db(tmp_path, rec)
+    data = {**GOOD, "contacts": [{"nom": "Marin", "fonction": "directrice", "email": "i.marin@laposte.net"}],
+            "rappel": {"ask_for": "Mme Marin", "notes": "jeudi matin"}}
+    ax = FakeAxonaut()
+    await process_call(call_id, llm_client=FakeLLM(data), axonaut=ax, settings=st)  # type: ignore[arg-type]
+    row = db.get_call(call_id, st.db_path)
+    assert row and row["outcome"] == "rappel"
+    assert json.loads(row["state_json"])["contacts"][0]["email"] == "i.marin@laposte.net"
+    assert "Marin" in ax.of("create_event")[0]["content"]  # contact repris dans l'événement Axonaut

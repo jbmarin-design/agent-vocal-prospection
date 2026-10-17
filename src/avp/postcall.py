@@ -33,6 +33,7 @@ from .models import (
     CallAnalysis,
     CallOutcome,
     CallRecordFile,
+    CallState,
     Campaign,
     ContactInfo,
 )
@@ -254,10 +255,44 @@ def _postprocess(analysis: CallAnalysis, record: CallRecordFile, tz: ZoneInfo) -
     updates: dict[str, Any] = {}
     if analysis.date_relance is not None and analysis.date_relance.tzinfo is None:
         updates["date_relance"] = analysis.date_relance.replace(tzinfo=tz)
+    if analysis.rappel and analysis.rappel.when is not None and analysis.rappel.when.tzinfo is None:
+        updates["rappel"] = analysis.rappel.model_copy(update={"when": analysis.rappel.when.replace(tzinfo=tz)})
     # Le RDV confirmé par l'outil fait foi.
     if record.state.rdv is not None and outcome_of(record) is CallOutcome.RDV and not analysis.rdv_confirme:
         updates["rdv_confirme"] = True
     return analysis.model_copy(update=updates) if updates else analysis
+
+
+def apply_analysis(state: CallState, analysis: CallAnalysis) -> list[str]:
+    """Reporte dans l'état d'appel ce que l'analyse a extrait de la transcription.
+
+    Pendant l'appel, l'agent ne note plus rien (outils retirés : latence et oublis) ; contacts,
+    rappel et réponses viennent donc de Sonnet. Ce qui a déjà été enregistré par un outil n'est
+    jamais écrasé. Retourne la liste des éléments ajoutés (pour le journal).
+    """
+    from .agent.logic import merge_contact  # logique pure, sans LiveKit
+
+    added: list[str] = []
+    for c in analysis.contacts:
+        if c.nom or c.prenom or c.email or c.telephone:
+            merge_contact(state, c)
+            added.append(f"contact {c.nom_complet or c.fonction or '?'}")
+    if analysis.rappel is not None and state.callback is None:
+        state.callback = analysis.rappel
+        added.append("rappel")
+    for qid, ans in analysis.reponses.items():
+        if ans and qid not in state.answers:
+            state.answers[qid] = ans
+            added.append(f"réponse {qid}")
+    if not state.contact_name and analysis.interlocuteur:
+        state.contact_name = analysis.interlocuteur
+    if not state.contact_role and analysis.fonction:
+        state.contact_role = analysis.fonction
+    # Issue par défaut (« barrage ») alors qu'un rappel a été convenu : c'est un rappel.
+    if state.callback is not None and state.outcome in (None, CallOutcome.BARRAGE):
+        state.outcome = CallOutcome.RAPPEL
+        added.append("issue rappel")
+    return added
 
 
 async def analyze_call(
@@ -756,6 +791,12 @@ async def process_call(
             db.update_call(call_id, db_path, analysis_status=AnalysisStatus.ERREUR, error=f"analyse : {exc}")
             return None
 
+    outcome_before = record.state.outcome
+    if analysis:
+        added = apply_analysis(record.state, analysis)
+        if added:
+            log.info("post-appel %s : extrait de la transcription : %s", call_id, ", ".join(added))
+
     # Synchronisation Axonaut
     sync: dict[str, Any]
     own_axonaut = False
@@ -805,10 +846,13 @@ async def process_call(
     if analysis:
         fields["analysis_json"] = analysis
         fields["score"] = analysis.score
+        fields["state_json"] = record.state
+        if record.state.outcome is not None and record.state.outcome != outcome_before:
+            fields["outcome"] = record.state.outcome.value
     db.update_call(call_id, db_path, **fields)
     if analysis and row.get("prospect_id"):
         db.set_prospect_score(int(row["prospect_id"]), analysis.score, db_path)
-    log.info("post-appel %s : issue=%s score=%s axonaut=%s", call_id, outcome.value,
+    log.info("post-appel %s : issue=%s score=%s axonaut=%s", call_id, outcome_of(record).value,
              analysis.score if analysis else "-", sync)
     return analysis
 

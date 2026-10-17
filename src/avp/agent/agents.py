@@ -1,13 +1,17 @@
 """Les deux agents de l'appel et leurs outils.
 
 - ``AgentAccueil``  : franchit le standard, obtient le décideur (ou un rappel), puis passe la main.
-- ``AgentDecideur`` : qualifie, traite les objections, prend RDV / transfère / note un rappel.
+- ``AgentDecideur`` : qualifie, traite les objections, prend RDV / transfère.
 
 Les docstrings des outils sont lues par Claude pour décider quand les appeler : elles font
 partie du « prompt ». Les modifier change le comportement de l'agent.
 
-Convention : un outil qui termine l'appel ne renvoie rien (aucune nouvelle réponse vocale),
-l'au revoir ayant été dit par l'agent juste avant l'appel de l'outil (voir prompts/base.md).
+Pas d'outil de prise de notes : contacts, rappel et réponses sont extraits de la transcription
+après l'appel (postcall.apply_analysis). Avec ces outils, Claude oubliait de les appeler ou
+retardait sa réplique (tests des 16 et 17/10).
+
+Fin d'appel : un outil qui termine l'appel ne renvoie rien ; ``finish_call`` dit la formule
+d'au revoir FIXE (``CLOSING_LINE``) si l'agent ne l'a pas déjà dite, puis raccroche.
 """
 
 from __future__ import annotations
@@ -20,19 +24,17 @@ from livekit import api
 from livekit.agents import Agent, RunContext, StopResponse, ToolError, function_tool, get_job_context
 
 from ..livekit_admin import participant_identity_for
-from ..models import Callback, CallOutcome, ContactInfo, Rdv
-from ..prompts import build_instructions, format_slot_fr
+from ..models import CallOutcome, Rdv
+from ..prompts import CLOSING_LINE, build_instructions, format_slot_fr
 from .logic import (
     END_OUTCOMES_ACCUEIL,
     END_OUTCOMES_DECIDEUR,
     CallUserData,
     coerce_outcome,
+    is_goodbye,
     looks_like_email,
     looks_like_voicemail,
     match_slot,
-    merge_contact,
-    parse_tool_datetime,
-    question_ids,
     voicemail_window_open,
 )
 
@@ -65,30 +67,40 @@ async def hang_up(ud: CallUserData, reason: str, *, wait_s: float = 0.0) -> None
         job.shutdown(reason=reason)
 
 
-async def _ensure_reply(session, *, delay_s: float = 0.4) -> None:
-    """Filet de sécurité des outils « silencieux » (qui ne relancent pas Claude).
-
-    Si Claude a appelé l'outil sans rien dire, l'agent resterait muet : après un court délai,
-    si l'agent écoute et que le dernier message de l'historique est encore celui du prospect,
-    on demande une réponse. Délai court : avec 1,2 s, le 1er mot arrivait à 2,4 s (test du 17/10).
-    """
-    await asyncio.sleep(delay_s)
+def _last_agent_text(session) -> str:
     try:
-        if session.agent_state != "listening" or session.user_state == "speaking":
-            return
         msgs = [i for i in session.history.items if getattr(i, "type", "") == "message"]
-        if msgs and msgs[-1].role == "user":
-            session.generate_reply()
-    except Exception:
-        logger.debug("vérification de réponse impossible", exc_info=True)
+    except Exception:  # pragma: no cover
+        return ""
+    for m in reversed(msgs):
+        if m.role == "assistant":
+            return m.text_content or ""
+    return ""
 
 
-async def _hang_up_after_playout(context: RunContext[CallUserData], reason: str) -> None:
+async def finish_call(session, ud: CallUserData, reason: str) -> None:
+    """Fin d'appel déterministe : formule d'au revoir fixe (si l'agent ne l'a pas dite), puis raccrochage.
+
+    Appelée par terminer_appel / enregistrer_opposition, et par les filets de sécurité du worker
+    (au revoir de l'agent, ou remerciement final du prospect suivi d'un silence).
+    """
+    if ud.hangup_requested or ud.closing:
+        return
+    ud.closing = True
+    if not is_goodbye(_last_agent_text(session)):
+        try:
+            await session.say(CLOSING_LINE, allow_interruptions=False).wait_for_playout()
+        except Exception:  # pragma: no cover - session déjà fermée (le prospect a raccroché)
+            logger.debug("au revoir non dit", exc_info=True)
+    await hang_up(ud, reason, wait_s=0.8)
+
+
+async def _finish_after_playout(context: RunContext[CallUserData], reason: str) -> None:
     try:
         await context.wait_for_playout()
-    except Exception:  # pragma: no cover - interruption pendant l'au revoir
+    except Exception:  # pragma: no cover - interruption pendant la dernière phrase
         pass
-    await hang_up(context.userdata, reason, wait_s=0.8)
+    await finish_call(context.session, context.userdata, reason)
 
 
 def _instructions(ud: CallUserData, role: str) -> str:
@@ -121,71 +133,11 @@ class _BaseProspectAgent(Agent):
     # -- Outils communs ------------------------------------------------------
 
     @function_tool
-    async def noter_rappel(
-        self, context: RunContext[CallUserData], moment: str, personne: str = "", date_iso: str = ""
-    ) -> None:
-        """Enregistre un rappel convenu avec l'interlocuteur (la personne recherchée est absente,
-        occupée, ou préfère être rappelée), ou une demande d'envoi d'information. Outil silencieux :
-        dites votre phrase dans la même réponse (question groupée sur les coordonnées s'il en manque,
-        ou remerciements), jamais l'outil seul.
-
-        Args:
-            moment: Le moment convenu, en clair, tel que dit par l'interlocuteur (ex. « jeudi après-midi », « après le 15 »). Peut aussi contenir une ligne directe ou un email donné.
-            personne: Le nom et la fonction de la personne à demander au rappel, si connus.
-            date_iso: Si un jour et une heure précis ont été convenus, la date au format ISO 8601 avec fuseau (ex. 2026-10-08T14:30:00+02:00). Sinon laisser vide.
-        """
-        ud = context.userdata
-        when = parse_tool_datetime(date_iso, ud.tz)
-        if when is not None and when <= datetime.now(UTC):
-            when = None
-        ud.state.callback = Callback(when=when, ask_for=personne.strip(), notes=moment.strip())
-        if personne and not ud.state.contact_name:
-            ud.state.contact_name = personne.strip()
-        logger.info("rappel noté : %s (%s)", moment, when)
-        # Outil silencieux : pas de second appel à Claude (≈ 1 à 2 s gagnées).
-        _spawn(_ensure_reply(context.session))
-        return None
-
-    @function_tool
-    async def noter_contact(
-        self,
-        context: RunContext[CallUserData],
-        fonction: str,
-        prenom: str = "",
-        nom: str = "",
-        telephone: str = "",
-        email: str = "",
-        disponibilites: str = "",
-        notes: str = "",
-    ) -> None:
-        """Note les coordonnées d'une personne utile : le décideur, l'agent technique, ou toute personne
-        citée par votre interlocuteur. Outil silencieux : appelez-le dans la même réponse que votre
-        phrase, jamais seul. Rappelez-le pour compléter une fiche (même nom ou même fonction).
-
-        Args:
-            fonction: Le rôle de la personne (ex. « directrice », « agent technique », « IDEC », « secrétariat »).
-            prenom: Le prénom, si donné.
-            nom: Le nom de famille, si donné.
-            telephone: Une ligne directe ou un portable, chiffres tels que dictés.
-            email: L'adresse email, telle que répétée et confirmée.
-            disponibilites: Quand la joindre, en clair (ex. « le mardi matin », « après 16 heures », « absente jusqu'au 20 »).
-            notes: Toute autre information utile (ex. « arrivée il y a trois mois », « gère aussi le site de Lectoure »).
-        """
-        ud = context.userdata
-        contact = merge_contact(ud.state, ContactInfo(
-            prenom=prenom, nom=nom, fonction=fonction, telephone=telephone,
-            email=email, disponibilites=disponibilites, notes=notes,
-        ))
-        logger.info("contact noté : %s (%s)", contact.nom_complet or "?", contact.fonction)
-        _spawn(_ensure_reply(context.session))
-        return None
-
-    @function_tool
     async def enregistrer_opposition(self, context: RunContext[CallUserData], motif: str = "") -> None:
         """À appeler IMMÉDIATEMENT si l'interlocuteur demande de ne plus être appelé, de retirer son
         numéro, ou se plaint du démarchage. Le numéro est ajouté à la liste d'opposition et l'appel
         se termine. Avant d'appeler cet outil, dites dans la même réponse que c'est noté, que vous
-        ne rappellerez plus, excusez-vous du dérangement et dites au revoir.
+        ne rappellerez plus, et excusez-vous du dérangement. L'au revoir est dit automatiquement.
 
         Args:
             motif: Ce que la personne a dit, résumé en quelques mots.
@@ -195,7 +147,7 @@ class _BaseProspectAgent(Agent):
         ud.state.optout_reason = motif.strip() or "demande orale pendant l'appel"
         ud.state.outcome = CallOutcome.OPPOSITION
         logger.info("opposition enregistrée : %s", motif)
-        _spawn(_hang_up_after_playout(context, "opposition"))
+        _spawn(_finish_after_playout(context, "opposition"))
         return None
 
 
@@ -250,10 +202,11 @@ class AgentAccueil(_BaseProspectAgent):
 
     @function_tool
     async def terminer_appel(self, context: RunContext[CallUserData], issue: str, resume: str = "") -> None:
-        """Termine l'appel. Dites TOUJOURS au revoir dans la même réponse, avant d'appeler cet outil.
+        """Termine l'appel. Dans la même réponse, avant l'outil, remerciez en une phrase. Ne dites pas
+        au revoir : la formule d'au revoir est dite automatiquement, puis l'appel raccroche.
 
         Args:
-            issue: L'une de : rappel (rappel convenu), barrage (refus de passer la personne, sans rappel), refus (le décideur refuse dès l'accueil), mauvais_numero (mauvais numéro ou établissement inexistant), non_qualifie (établissement hors cible).
+            issue: L'une de : rappel (la personne est à rappeler, ou un rappel est convenu), barrage (refus de passer la personne, sans rappel), refus (le décideur refuse dès l'accueil), mauvais_numero (mauvais numéro ou établissement inexistant), non_qualifie (établissement hors cible).
             resume: Une phrase qui résume l'échange.
         """
         ud = context.userdata
@@ -262,12 +215,10 @@ class AgentAccueil(_BaseProspectAgent):
             raise ToolError(
                 "Issue invalide. Choisissez parmi : " + ", ".join(o.value for o in END_OUTCOMES_ACCUEIL)
             )
-        if outcome is CallOutcome.RAPPEL and ud.state.callback is None:
-            raise ToolError("Pour l'issue rappel, appelez d'abord noter_rappel.")
         ud.state.outcome = outcome
         if resume:
             ud.note(resume.strip())
-        _spawn(_hang_up_after_playout(context, f"fin : {outcome.value}"))
+        _spawn(_finish_after_playout(context, f"fin : {outcome.value}"))
         return None
 
 
@@ -289,32 +240,13 @@ class AgentDecideur(_BaseProspectAgent):
         )
 
     @function_tool
-    async def enregistrer_reponse(self, context: RunContext[CallUserData], question_id: str, reponse: str) -> None:
-        """Note une information de qualification donnée par l'interlocuteur. Outil silencieux :
-        appelez-le dans la même réponse que votre phrase, jamais seul. Ne vous arrêtez pas pour lui.
-
-        Args:
-            question_id: L'identifiant de la question, tel qu'indiqué entre crochets dans la campagne.
-            reponse: La réponse de l'interlocuteur, résumée fidèlement, sans rien inventer.
-        """
-        ud = context.userdata
-        qid = question_id.strip().strip("[]")
-        valid = question_ids(ud.campaign)
-        if qid not in valid:
-            raise ToolError(f"Identifiant inconnu. Identifiants valides : {', '.join(sorted(valid))}")
-        ud.state.answers[qid] = reponse.strip()
-        # Rien en retour : pas de second aller-retour vers Claude, donc pas de latence ajoutée.
-        _spawn(_ensure_reply(context.session))
-        return None
-
-    @function_tool
     async def proposer_creneaux(self, context: RunContext[CallUserData]) -> str:
         """Donne les créneaux de rendez-vous disponibles avec Jean-Baptiste. À appeler avant de proposer
         des créneaux à voix haute. Proposez-en deux ou trois, pas plus."""
         ud = context.userdata
         slots = sorted(ud.meta.rdv_slots)
         if not slots:
-            return "Aucun créneau disponible. Proposez que Jean-Baptiste rappelle et utilisez noter_rappel."
+            return "Aucun créneau disponible. Proposez que Jean-Baptiste rappelle, et demandez quand."
         ud.proposed_slots = slots
         tz_name = ud.settings.timezone
 
@@ -366,12 +298,12 @@ class AgentDecideur(_BaseProspectAgent):
             return (
                 f"Rendez-vous noté sous réserve pour le {format_slot_fr(slot, ud.settings.timezone)}. "
                 "Dites que Jean-Baptiste le confirmera par email dans la journée, à l'adresse donnée. "
-                "Récapitulez brièvement, remerciez, dites au revoir, puis appelez terminer_appel avec l'issue rdv."
+                "Récapitulez brièvement, remerciez, puis appelez terminer_appel avec l'issue rdv."
             )
         return (
             f"Rendez-vous enregistré pour le {format_slot_fr(slot, ud.settings.timezone)}. "
             "Dites qu'une invitation va arriver par email. "
-            "Récapitulez brièvement, remerciez, dites au revoir, puis appelez terminer_appel avec l'issue rdv."
+            "Récapitulez brièvement, remerciez, puis appelez terminer_appel avec l'issue rdv."
         )
 
     @function_tool
@@ -408,7 +340,7 @@ class AgentDecideur(_BaseProspectAgent):
             ud.note(f"transfert échoué : {e}")
             return (
                 "Le transfert a échoué. Excusez-vous, puis proposez un rendez-vous avec proposer_creneaux "
-                "ou un rappel avec noter_rappel."
+                "ou un rappel."
             )
         ud.state.transferred = True
         ud.state.outcome = CallOutcome.TRANSFERT
@@ -418,10 +350,11 @@ class AgentDecideur(_BaseProspectAgent):
 
     @function_tool
     async def terminer_appel(self, context: RunContext[CallUserData], issue: str, resume: str = "") -> None:
-        """Termine l'appel. Dites TOUJOURS au revoir dans la même réponse, avant d'appeler cet outil.
+        """Termine l'appel. Dans la même réponse, avant l'outil, remerciez en une phrase. Ne dites pas
+        au revoir : la formule d'au revoir est dite automatiquement, puis l'appel raccroche.
 
         Args:
-            issue: L'une de : rdv (RDV confirmé avec confirmer_rdv), rappel (rappel noté avec noter_rappel), qualifie (intérêt sans RDV), non_qualifie (hors cible, pas de besoin), refus (pas intéressé).
+            issue: L'une de : rdv (RDV confirmé avec confirmer_rdv), rappel (rappel convenu), qualifie (intérêt sans RDV), non_qualifie (hors cible, pas de besoin), refus (pas intéressé).
             resume: Une phrase qui résume l'échange.
         """
         ud = context.userdata
@@ -432,12 +365,10 @@ class AgentDecideur(_BaseProspectAgent):
             )
         if outcome is CallOutcome.RDV and ud.state.rdv is None:
             raise ToolError("Pour l'issue rdv, appelez d'abord confirmer_rdv.")
-        if outcome is CallOutcome.RAPPEL and ud.state.callback is None:
-            raise ToolError("Pour l'issue rappel, appelez d'abord noter_rappel.")
         ud.state.outcome = outcome
         if resume:
             ud.note(resume.strip())
-        _spawn(_hang_up_after_playout(context, f"fin : {outcome.value}"))
+        _spawn(_finish_after_playout(context, f"fin : {outcome.value}"))
         return None
 
 

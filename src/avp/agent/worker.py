@@ -36,7 +36,7 @@ from ..config import get_settings
 from ..livekit_admin import participant_identity_for, sip_headers_for
 from ..models import CallMetadata, CallOutcome
 from ..prompts import opening_line, prompt_version
-from .agents import AgentAccueil, AgentRepondeur, hang_up
+from .agents import AgentAccueil, AgentRepondeur, finish_call, hang_up
 from .logic import (
     GOODBYE_GRACE_S,
     PRESENCE_PROMPTS,
@@ -44,9 +44,11 @@ from .logic import (
     classify_sip_failure,
     console_metadata,
     dump_usage,
+    ends_with_question,
     finalize_call,
     format_latency,
     history_to_transcript,
+    is_closing_remark,
     is_goodbye,
     is_silent_pickup,
     looks_like_voicemail,
@@ -91,7 +93,7 @@ async def _duration_guard(ud: CallUserData, session) -> None:
     logger.info("durée maximale bientôt atteinte : conclusion demandée")
     session.generate_reply(
         instructions="Le temps est écoulé. Concluez maintenant en une phrase : proposez que Jean-Baptiste "
-        "rappelle si besoin, remerciez, dites au revoir, puis appelez terminer_appel."
+        "rappelle si besoin, remerciez, puis appelez terminer_appel."
     )
     await asyncio.sleep(30)
     if not ud.hangup_requested:
@@ -165,6 +167,7 @@ async def entrypoint(ctx: JobContext) -> None:
     session = build_session(ud, vad=vad)
     tasks: list[asyncio.Task] = []
     away_count = 0
+    closing_remark = False  # dernière réplique du prospect = remerciement / au revoir
 
     # 6. Fin d'appel (toujours exécuté, même après une exception) -----------------
     async def on_shutdown(reason: str = "") -> None:
@@ -205,30 +208,37 @@ async def entrypoint(ctx: JobContext) -> None:
 
     @session.on("conversation_item_added")
     def _on_item(ev) -> None:
+        nonlocal closing_remark
         # Latence par tour, dans les logs : `docker compose logs agent-worker | grep latence`
         item = getattr(ev, "item", None)
         summary = format_latency(getattr(item, "role", ""), getattr(item, "metrics", None))
         if summary:
             logger.info("latence %s : %s", "prospect" if item.role == "user" else "agent", summary)
-        # Filet de sécurité : l'agent a dit au revoir mais n'a pas appelé terminer_appel.
-        if (
-            getattr(item, "role", "") == "assistant"
-            and not ud.hangup_requested
-            and is_goodbye(getattr(item, "text_content", "") or "")
-        ):
-            tasks.append(asyncio.create_task(_goodbye_guard(item)))
+        # Fin d'appel sans terminer_appel (Claude l'oublie) : deux filets de sécurité.
+        role = getattr(item, "role", "")
+        text = getattr(item, "text_content", "") or ""
+        if role == "user":
+            closing_remark = is_closing_remark(text)
+        elif role == "assistant" and not (ud.hangup_requested or ud.closing):
+            if is_goodbye(text):
+                tasks.append(asyncio.create_task(_end_guard(item, "au revoir sans terminer_appel")))
+            elif closing_remark and not ends_with_question(text):
+                # Le prospect a remercié / dit au revoir et l'agent n'attend plus de réponse.
+                tasks.append(asyncio.create_task(_end_guard(item, "fin de conversation (remerciements)")))
 
-    async def _goodbye_guard(goodbye_item) -> None:
-        """Raccroche si, quelques secondes après l'au revoir, rien n'a relancé l'échange."""
+    async def _end_guard(last_item, reason: str) -> None:
+        """Termine l'appel si, quelques secondes après cette réplique, personne n'a relancé l'échange."""
         await asyncio.sleep(GOODBYE_GRACE_S)
-        if ud.hangup_requested or session.user_state == "speaking" or session.agent_state == "speaking":
+        if ud.hangup_requested or ud.closing:
+            return
+        if session.user_state == "speaking" or session.agent_state in ("speaking", "thinking"):
             return
         msgs = [i for i in session.history.items if getattr(i, "type", "") == "message"]
-        if msgs and msgs[-1] is not goodbye_item:
-            return  # le prospect a repris la parole : la conversation continue
-        logger.info("au revoir sans terminer_appel : raccrochage de secours")
-        ud.note("raccrochage de secours (au revoir sans terminer_appel)")
-        await hang_up(ud, "au revoir sans terminer_appel")
+        if msgs and msgs[-1] is not last_item:
+            return  # la conversation a continué
+        logger.info("fin d'appel de secours : %s", reason)
+        ud.note(f"fin d'appel de secours ({reason})")
+        await finish_call(session, ud, reason)
 
     @session.on("close")
     def _on_close(ev) -> None:

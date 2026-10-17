@@ -70,6 +70,7 @@ class CallUserData:
     ended_at: datetime | None = None
     proposed_slots: list[datetime] = field(default_factory=list)
     hangup_requested: bool = False
+    closing: bool = False  # au revoir final en cours (finish_call)
     finalized: bool = False
     usage: dict[str, Any] = field(default_factory=dict)
     # Pendant le « Allô ? » : levé dès que l'interlocuteur parle (voir worker._probe_presence).
@@ -176,12 +177,38 @@ def is_goodbye(text: str) -> bool:
     """Vrai si la réplique de l'agent se termine par une formule d'au revoir.
 
     Seule la fin de la réplique compte : « bonne journée » glissé en milieu de phrase ne vaut pas
-    fin d'appel. Sert au raccrochage de secours quand Claude salue sans appeler terminer_appel.
+    fin d'appel. Sert à ne pas répéter l'au revoir fixe, et au raccrochage de secours.
     """
     import re
 
     tail = (text or "").strip().lower()[-GOODBYE_TAIL_CHARS:]
     return any(re.search(p, tail) for p in _GOODBYE_PATTERNS)
+
+
+_CLOSING_PATTERNS = (
+    r"\bmerci\b",
+    r"au revoir",
+    r"bonne (?:fin de )?(?:journ[ée]e|soir[ée]e|semaine)",
+    r"\bc'est (?:tout|bon|not[ée]|parfait)\b",
+)
+CLOSING_MAX_WORDS = 12
+
+
+def is_closing_remark(text: str) -> bool:
+    """Vrai si le prospect clôt l'échange : réplique courte de remerciement ou d'au revoir
+    (« Ok super, merci », « Non merci », « Au revoir »). Une longue réplique contenant « merci »
+    n'en est pas une : la personne continue de parler."""
+    import re
+
+    t = (text or "").strip().lower()
+    if not t or len(t.split()) > CLOSING_MAX_WORDS:
+        return False
+    return any(re.search(p, t) for p in _CLOSING_PATTERNS)
+
+
+def ends_with_question(text: str) -> bool:
+    """Vrai si la réplique de l'agent attend une réponse (se termine par une question)."""
+    return (text or "").rstrip().endswith("?")
 
 
 def voicemail_window_open(answered_at: datetime | None, now: datetime, user_turns: int) -> bool:

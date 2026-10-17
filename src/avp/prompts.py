@@ -61,6 +61,8 @@ OPENING_DISCLOSURE = (
 )
 OPENING_ASK = "Pourrais-je parler {cible}, s'il vous plaît ?"
 OPENING_TEST = "Il s'agit d'un test technique d'OpteoLink, cela ne prendra qu'une minute."
+# Au revoir FIXE, dit par le worker en fin d'appel (agents.finish_call), jamais par Claude.
+CLOSING_LINE = "Je vous souhaite une très bonne journée. Au revoir."
 
 _JOURS = ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")
 _MOIS = (
@@ -225,8 +227,8 @@ def campaign_section(campaign: Campaign) -> str:
     lines += ["", "## Questions de qualification"]
     if campaign.qualification:
         lines.append(
-            "Posez-les une à une, dans un ordre naturel. Après chaque réponse, appelez l'outil "
-            "enregistrer_reponse avec l'identifiant entre crochets."
+            "Un guide, pas une liste : deux ou trois au plus, une à la fois, dans un ordre naturel. "
+            "Les réponses sont relevées automatiquement après l'appel : n'annoncez pas que vous notez."
         )
         for q in campaign.qualification:
             extra = " (prioritaire)" if q.obligatoire else ""
@@ -330,7 +332,7 @@ def context_section(
         else:
             lines.append(
                 f"Aucun créneau de rendez-vous n'est disponible : proposez que {HUMAN_FIRST_NAME} rappelle, "
-                "et notez un rappel avec l'outil noter_rappel."
+                "et demandez quand."
             )
     return "\n".join(lines)
 

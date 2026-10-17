@@ -77,10 +77,12 @@ avp (planificateur)                LiveKit                     agent-worker     
    - répondeur : message court ou raccrochage, selon la campagne ;
    - SVI : tentative de navigation vers un humain, sinon raccrochage.
 5. **Conversation** :
-   - `AgentAccueil` annonce l'IA et l'enregistrement, puis demande le décideur. Il dispose de `passer_au_decideur` (handoff), `noter_rappel`, `enregistrer_opposition` et `terminer_appel`.
-   - `AgentDecideur` déroule la qualification. Il dispose de `enregistrer_reponse`, `proposer_creneaux`, `confirmer_rdv`, `transferer_a_un_humain`, `noter_rappel`, `enregistrer_opposition` et `terminer_appel`.
+   - `AgentAccueil` annonce l'IA et l'enregistrement, puis demande le décideur. Il dispose de `passer_au_decideur` (handoff), `enregistrer_opposition` et `terminer_appel`.
+   - `AgentDecideur` déroule la qualification. Il dispose de `proposer_creneaux`, `confirmer_rdv`, `transferer_a_un_humain`, `enregistrer_opposition` et `terminer_appel`.
+   - **Aucun outil de prise de notes** : contacts, rappel et réponses de qualification sont extraits de la transcription par l'analyse post-appel (étape 7). Avec des outils, Haiku oubliait de les appeler ou retardait sa réplique (tests des 16 et 17/10/2026).
+   - **Fin d'appel déterministe** : `terminer_appel` puis la formule d'au revoir fixe (`CLOSING_LINE`) et le raccrochage. Filets de sécurité du worker si l'outil n'est pas appelé : l'agent a dit au revoir, ou le prospect a remercié et l'agent n'attend plus de réponse ; trois secondes sans reprise de la conversation, et l'appel se termine.
 6. **Fin d'appel** : le worker sérialise l'état (`CallState`) et l'historique de conversation dans `data/transcripts/<call_id>.json`, met à jour `calls` et `prospects` (statut, tentative suivante), puis supprime la room, ce qui raccroche.
-7. **Post-appel** : `avp postcall run` (en boucle dans le démon) lit les appels `analysis_status='en_attente'`. Claude Sonnet 5.5 renvoie une analyse structurée (score, résumé, objections, prochaine action), puis Axonaut est mis à jour :
+7. **Post-appel** : `avp postcall run` (en boucle dans le démon) lit les appels `analysis_status='en_attente'`. Claude Sonnet 5.5 renvoie une analyse structurée (score, résumé, objections, prochaine action, et les contacts, rappel et réponses extraits de la transcription, reportés dans `CallState` par `apply_analysis`), puis Axonaut est mis à jour :
    - un événement `nature=3` (appel) sur la société ;
    - l'étape d'opportunité selon le mapping de la campagne ;
    - une tâche de rappel, et une tâche de relance si une échéance lointaine est citée (fin de contrat).
