@@ -36,7 +36,7 @@ from ..config import get_settings
 from ..livekit_admin import participant_identity_for, sip_headers_for
 from ..models import CallMetadata, CallOutcome
 from ..prompts import opening_line, prompt_version
-from .agents import AgentAccueil, AgentRepondeur, finish_call, hang_up
+from .agents import AgentAccueil, AgentDecideur, AgentRepondeur, finish_call, hang_up
 from .logic import (
     GOODBYE_GRACE_S,
     PRESENCE_PROMPTS,
@@ -101,24 +101,28 @@ async def _duration_guard(ud: CallUserData, session) -> None:
         await hang_up(ud, "durée maximale")
 
 
-async def _warm_up_llm(llm) -> None:
-    """Petite requête à Claude pendant la sonnerie : ouvre la connexion HTTP avant le décroché.
+async def _warm_up_llm(llm, agents) -> None:
+    """Requêtes à Claude pendant la sonnerie, avec les vraies consignes et les outils de chaque agent.
 
-    Au 1er appel après un redémarrage du conteneur, la 1re requête restait bloquée (« Request timed
-    out ») et l'agent se taisait tout l'appel (tests du 16 et 17/10). La durée est journalisée
-    (`grep préchauffage`) pour suivre le phénomène.
+    1. Ouvre la connexion HTTP : au 1er appel après un redémarrage du conteneur, la 1re requête
+       restait bloquée (« Request timed out ») et l'agent se taisait tout l'appel (16 et 17/10).
+    2. Remplit le cache de prompt (outils + consignes, environ 7 000 jetons) : sans cela, la
+       1re réplique de l'appel attendait 1,6 à 1,9 s, les suivantes 0,6 s (17/10).
+    Durées journalisées : `grep préchauffage`.
     """
     loop = asyncio.get_running_loop()
-    t0 = loop.time()
-    try:
-        chat_ctx = ChatContext.empty()
-        chat_ctx.add_message(role="user", content="Réponds seulement : OK.")
-        async with llm.chat(chat_ctx=chat_ctx) as stream:
-            async for _ in stream:
-                pass  # lecture complète : un flux interrompu peut laisser la connexion inutilisable
-        logger.info("préchauffage LLM : %.2f s", loop.time() - t0)
-    except Exception as exc:
-        logger.warning("préchauffage LLM en échec après %.2f s : %s", loop.time() - t0, exc)
+    for agent in agents:
+        t0 = loop.time()
+        try:
+            chat_ctx = ChatContext.empty()
+            chat_ctx.add_message(role="system", content=str(agent.instructions))
+            chat_ctx.add_message(role="user", content="Allô ?")
+            async with llm.chat(chat_ctx=chat_ctx, tools=list(agent.tools)) as stream:
+                async for _ in stream:
+                    pass  # lecture complète : un flux interrompu peut laisser la connexion inutilisable
+            logger.info("préchauffage LLM (%s) : %.2f s", getattr(agent, "role", "?"), loop.time() - t0)
+        except Exception as exc:
+            logger.warning("préchauffage LLM en échec après %.2f s : %s", loop.time() - t0, exc)
 
 
 async def _probe_presence(ud: CallUserData, session) -> bool:
@@ -261,9 +265,12 @@ async def entrypoint(ctx: JobContext) -> None:
         ctx.shutdown("session fermée")
 
     # 2. Démarrage de la session -------------------------------------------------
-    await session.start(agent=AgentAccueil(ud), room=ctx.room)
+    accueil = AgentAccueil(ud)
+    await session.start(agent=accueil, room=ctx.room)
     if not console and not settings.dry_run:
-        tasks.append(asyncio.create_task(_warm_up_llm(session.llm)))
+        # L'agent décideur n'existe qu'au passage de relais : on préchauffe une instance identique
+        # (mêmes consignes, l'heure étant celle du début de l'appel, cf. agents._instructions).
+        tasks.append(asyncio.create_task(_warm_up_llm(session.llm, [accueil, AgentDecideur(ud)])))
 
     if console:
         ud.answered_at = datetime.now(UTC)

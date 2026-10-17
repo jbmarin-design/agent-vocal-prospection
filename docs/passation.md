@@ -90,7 +90,7 @@ Garde cette ligne si le sujet revient, avec tact.
 # mettre à jour et redéployer (git en tant que avp, sinon « dubious ownership »)
 sudo -u avp git -C /opt/agent-vocal-prospection pull
 cd /opt/agent-vocal-prospection/deploy          # docker compose doit être lancé d'ici
-sudo -u avp docker compose build agent-worker
+sudo -u avp docker compose build agent-worker orchestrator   # les DEUX images (post-appel = orchestrator)
 sudo -u avp docker compose up -d --force-recreate agent-worker orchestrator
 
 avp check                                        # état général

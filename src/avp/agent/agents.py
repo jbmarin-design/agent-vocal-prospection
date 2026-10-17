@@ -108,7 +108,9 @@ def _instructions(ud: CallUserData, role: str) -> str:
         role,  # type: ignore[arg-type]
         ud.campaign,
         ud.prospect,
-        now=datetime.now(UTC),
+        # Heure du début de l'appel, pas l'heure courante : les consignes restent identiques d'un
+        # agent à l'autre et au préchauffage, donc le cache de prompt d'Anthropic sert (1er mot plus tôt).
+        now=ud.started_at,
         attempt=ud.meta.attempt,
         rdv_slots=ud.meta.rdv_slots,
         prompts_dir=ud.settings.prompts_dir,
