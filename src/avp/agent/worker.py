@@ -28,6 +28,7 @@ from datetime import UTC, datetime
 from dotenv import load_dotenv
 from livekit import api
 from livekit.agents import AMD, AgentServer, JobContext, JobProcess, cli
+from livekit.agents.llm import ChatContext
 
 from .. import db
 from ..campaigns import load_campaign
@@ -52,7 +53,7 @@ from .logic import (
     outcome_from_amd,
     should_leave_voicemail,
 )
-from .session import build_session, load_vad
+from .session import build_llm, build_session, load_vad
 
 load_dotenv()
 logger = logging.getLogger("avp.agent.worker")
@@ -96,6 +97,26 @@ async def _duration_guard(ud: CallUserData, session) -> None:
     if not ud.hangup_requested:
         ud.note("durée maximale atteinte")
         await hang_up(ud, "durée maximale")
+
+
+async def _warm_up_llm(llm) -> None:
+    """Petite requête à Claude pendant la sonnerie : ouvre la connexion HTTP avant le décroché.
+
+    Au 1er appel après un redémarrage du conteneur, la 1re requête restait bloquée (« Request timed
+    out ») et l'agent se taisait tout l'appel (tests du 16 et 17/10). La durée est journalisée
+    (`grep préchauffage`) pour suivre le phénomène.
+    """
+    loop = asyncio.get_running_loop()
+    t0 = loop.time()
+    try:
+        chat_ctx = ChatContext.empty()
+        chat_ctx.add_message(role="user", content="Réponds seulement : OK.")
+        async with llm.chat(chat_ctx=chat_ctx) as stream:
+            async for _ in stream:
+                pass  # lecture complète : un flux interrompu peut laisser la connexion inutilisable
+        logger.info("préchauffage LLM : %.2f s", loop.time() - t0)
+    except Exception as exc:
+        logger.warning("préchauffage LLM en échec après %.2f s : %s", loop.time() - t0, exc)
 
 
 async def _probe_presence(ud: CallUserData, session) -> bool:
@@ -218,6 +239,8 @@ async def entrypoint(ctx: JobContext) -> None:
 
     # 2. Démarrage de la session -------------------------------------------------
     await session.start(agent=AgentAccueil(ud), room=ctx.room)
+    if not console and not settings.dry_run:
+        tasks.append(asyncio.create_task(_warm_up_llm(session.llm)))
 
     if console:
         ud.answered_at = datetime.now(UTC)
@@ -249,7 +272,9 @@ async def entrypoint(ctx: JobContext) -> None:
     # 3. AMD puis numérotation -----------------------------------------------------
     async with AMD(
         session,
-        llm=None,  # réutilise Claude Haiku de la session (pas de service LiveKit Cloud)
+        # Claude Haiku, mais une instance à part : les requêtes de l'AMD, souvent annulées en cours
+        # de route, ne doivent pas partager la connexion de la conversation.
+        llm=build_llm(settings),
         stt=None,  # réutilise la transcription Deepgram de la session
         participant_identity=identity,
         ivr_detection=False,  # un SVI = on raccroche (pas de navigation automatique)
