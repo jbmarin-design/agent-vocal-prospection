@@ -507,3 +507,20 @@ def test_user_message_liste_les_creneaux(tmp_path: Path):
     rec.metadata.rdv_slots = [SLOT]
     msg = build_user_message(rec, settings_for(tmp_path))
     assert "2026-10-20T10:00:00+02:00" in msg
+
+
+def test_apply_analysis_opposition_et_decideur_joint():
+    st = CallState(outcome=CallOutcome.BARRAGE)
+    apply_analysis(st, analysis(opposition=True))
+    assert st.optout and st.outcome is CallOutcome.OPPOSITION
+    st2 = CallState(outcome=CallOutcome.BARRAGE)
+    apply_analysis(st2, analysis(score="froid", score_num=10, decideur_joint=True))
+    assert st2.decision_maker_reached and st2.outcome is CallOutcome.REFUS
+
+
+async def test_process_call_opposition_ajoute_a_la_liste(tmp_path: Path):
+    rec = record(CallOutcome.BARRAGE)
+    st, call_id, _ = setup_db(tmp_path, rec)
+    await process_call(call_id, llm_client=FakeLLM({**GOOD, "opposition": True}), axonaut=FakeAxonaut(),
+                       settings=st)  # type: ignore[arg-type]
+    assert any(r["phone"] == "+33562000000" for r in db.list_optout(st.db_path))

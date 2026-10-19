@@ -329,9 +329,20 @@ def apply_analysis(
         if ans and qid not in state.answers:
             state.answers[qid] = ans
             added.append(f"réponse {qid}")
+    if analysis.opposition and not state.optout:
+        # Le prospect a dit « ne m'appelez plus » puis a raccroché avant que l'agent l'enregistre.
+        state.optout = True
+        state.optout_reason = state.optout_reason or "demande relevée dans la transcription"
+        state.outcome = CallOutcome.OPPOSITION
+        added.append("opposition")
     if analysis.decideur_joint and not state.decision_maker_reached:
         state.decision_maker_reached = True
         added.append("décideur joint")
+    # « barrage » est l'issue par défaut quand l'agent n'a pas conclu (le prospect a raccroché) :
+    # fausse si le décideur a été joint.
+    if state.decision_maker_reached and state.outcome in (None, CallOutcome.BARRAGE):
+        state.outcome = CallOutcome.QUALIFIE if analysis.score in ("chaud", "tiede") else CallOutcome.REFUS
+        added.append(f"issue {state.outcome.value}")
     if not state.contact_name and analysis.interlocuteur:
         state.contact_name = analysis.interlocuteur
     if not state.contact_role and analysis.fonction:
@@ -839,12 +850,15 @@ async def process_call(
             db.update_call(call_id, db_path, analysis_status=AnalysisStatus.ERREUR, error=f"analyse : {exc}")
             return None
 
-    outcome_before = record.state.outcome
+    outcome_before, optout_before = record.state.outcome, record.state.optout
     if analysis:
         added = apply_analysis(record.state, analysis, campaign=campaign, slots=record.metadata.rdv_slots,
                                timezone=settings.timezone)
         if added:
             log.info("post-appel %s : extrait de la transcription : %s", call_id, ", ".join(added))
+        if record.state.optout and not optout_before and not record.metadata.test_mode:
+            db.add_optout(record.metadata.prospect.phone, record.state.optout_reason, source="analyse",
+                          db_path=db_path)
 
     # Synchronisation Axonaut
     sync: dict[str, Any]

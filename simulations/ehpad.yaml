@@ -102,6 +102,18 @@ scenarios:
       optout: true
       rdv: false
 
+  - id: opposition_en_ligne
+    titre: « Ne m'appelez plus », sans raccrocher
+    prospect: |
+      Tu es la directrice de l'EHPAD, tu décroches toi-même. Après la présentation, tu dis calmement :
+      « Non merci, et je ne veux plus être démarchée, retirez notre numéro de vos listes. »
+      Tu attends la réponse de l'agent, puis tu raccroches.
+    max_tours: 4
+    attendu:
+      issues: [opposition]
+      optout: true
+      requis: ["excus|désolée"]
+
   - id: deja_equipe
     titre: Déjà un prestataire, satisfait
     prospect: |

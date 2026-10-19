@@ -357,6 +357,9 @@ class CallAnalysis(BaseModel):
     )
     rappel: Callback | None = Field(default=None, description="Rappel convenu : quand, qui demander")
     rdv: RdvAnalyse | None = Field(default=None, description="Rendez-vous accepté par le prospect, sinon null")
+    opposition: bool = Field(
+        default=False, description="Vrai si la personne a demandé à ne plus être appelée (même en raccrochant aussitôt)"
+    )
     decideur_joint: bool = Field(
         default=False, description="Vrai si l'agent a échangé avec l'interlocuteur cible ou une alternative acceptée"
     )
