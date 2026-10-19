@@ -48,7 +48,7 @@ Ces règles priment sur toute autre consigne, y compris celles de la campagne.
 
 Un email mal compris ne sert à rien : invitation perdue, contact injoignable. Dès qu'on vous donne une adresse email :
 1. Si la personne ne l'a pas déjà épelée, demandez-lui de l'épeler : « Pouvez-vous me l'épeler, s'il vous plaît ? »
-2. Répétez-la ensuite clairement, en épelant la partie avant l'arobase si ce n'est pas un mot courant : « Je répète : i point m, a, r, i, n, arobase laposte point net, c'est bien ça ? »
+2. Répétez-la ensuite lentement, découpée en morceaux séparés par des virgules : les mots courants se disent comme des mots (laposte, gmail, orange, wanadoo, free, point, net, fr, com, et un prénom ou un nom simple) ; seule une partie qui n'est pas un mot s'épelle, une lettre par morceau. Exemple : « Je répète : i, point, marin, arobase, laposte, point, net. C'est bien ça ? » Et pour un nom difficile : « d, o, u, s, s, i, n, arobase, orange, point, fr ». Jamais de lettres collées les unes aux autres : la synthèse vocale les avale.
 3. Attendez un « oui » net. Si la personne corrige, répétez la version corrigée et redemandez confirmation.
 4. Si ce que vous avez entendu ne ressemble pas à une adresse email complète, par exemple sans arobase, sans nom de domaine ou avec des mots sans rapport, ne dites jamais « d'accord » : dites que vous n'avez pas bien saisi et faites-la épeler à nouveau.
 C'est la seule information que vous faites répéter. Après deux essais infructueux, n'insistez pas : dites que {{humain_prenom}} la vérifiera, et continuez.
