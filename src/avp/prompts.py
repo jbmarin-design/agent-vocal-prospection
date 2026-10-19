@@ -13,8 +13,10 @@ Les fichiers ``.md`` peuvent contenir des marqueurs ``{{variable}}`` simples, re
 (pas de moteur de template externe). Variables disponibles : voir ``template_variables``.
 
 La phrase d'ouverture (``opening_line``) est **fixe** et dite mot pour mot par le worker
-(``session.say``) dès qu'un humain décroche : annonce d'une assistante **virtuelle** (donc non
-humaine) et de l'enregistrement (AI Act art. 50, RGPD). Elle n'est pas modifiable par une campagne.
+(``session.say``) dès qu'un humain décroche : Sarah se présente comme assistante **virtuelle**
+(donc non humaine, AI Act art. 50). L'enregistrement est annoncé par le message que le XiVO joue au
+décroché (``ANNONCE_ENREGISTREMENT_PAR_XIVO=true``, défaut) ; sinon par la phrase d'ouverture.
+Elle n'est pas modifiable par une campagne.
 """
 
 from __future__ import annotations
@@ -55,10 +57,10 @@ HUMAN_FIRST_NAME = "Jean-Baptiste"
 TEST_CAMPAIGN_PREFIXES: tuple[str, ...] = ("echo",)
 
 # Gabarits de la phrase d'ouverture (inclus dans la version des prompts).
-OPENING_DISCLOSURE = (
-    "Bonjour, ici l'assistante commerciale virtuelle d'OpteoLink. "
-    "Cet appel est enregistré pour notre suivi commercial."
-)
+AGENT_NAME = "Sarah"
+OPENING_DISCLOSURE = f"Bonjour, ici {AGENT_NAME}, l'assistante virtuelle d'OpteoLink, les télécoms pro à Toulouse."
+# Seulement si le XiVO ne joue pas déjà son message d'annonce au décroché.
+OPENING_RECORDING = "Cet appel est enregistré."
 OPENING_ASK = "Pourrais-je parler {cible}, s'il vous plaît ?"
 OPENING_TEST = "Il s'agit d'un test technique d'OpteoLink, cela ne prendra qu'une minute."
 # Au revoir FIXE, dit par le worker en fin d'appel (agents.finish_call), jamais par Claude.
@@ -151,17 +153,19 @@ def is_test_campaign(campaign: Campaign) -> bool:
     return campaign.id.startswith(TEST_CAMPAIGN_PREFIXES)
 
 
-def opening_line(campaign: Campaign, prospect: Prospect) -> str:
+def opening_line(campaign: Campaign, prospect: Prospect, *, announce_recording: bool = False) -> str:
     """Phrase d'ouverture FIXE, dite mot pour mot dès le décroché d'un humain.
 
-    Salutation, « assistante commerciale virtuelle d'OpteoLink », appel enregistré,
-    puis demande de l'interlocuteur cible (le contact connu s'il y en a un). Pour une campagne de
-    test technique (id « echo… »), annonce le test au lieu de demander quelqu'un.
+    « Sarah, l'assistante virtuelle d'OpteoLink », puis demande de l'interlocuteur cible (le contact
+    connu s'il y en a un). `announce_recording` : ajoute l'annonce d'enregistrement, quand le XiVO
+    ne la joue pas lui-même. Pour une campagne de test technique (id « echo… »), annonce le test au
+    lieu de demander quelqu'un.
     """
+    head = f"{OPENING_DISCLOSURE} {OPENING_RECORDING}" if announce_recording else OPENING_DISCLOSURE
     if is_test_campaign(campaign):
-        return f"{OPENING_DISCLOSURE} {OPENING_TEST}"
+        return f"{head} {OPENING_TEST}"
     cible = prospect.contact_name.strip() or campaign.cible.interlocuteur.strip() or "la direction"
-    return f"{OPENING_DISCLOSURE} {OPENING_ASK.format(cible=_contract_a(cible))}"
+    return f"{head} {OPENING_ASK.format(cible=_contract_a(cible))}"
 
 
 def template_variables(

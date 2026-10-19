@@ -45,10 +45,14 @@ def test_format_slot_fr():
     assert prompts.format_slot_fr(datetime(2026, 12, 1, 9, 0, tzinfo=UTC)) == "mardi 1er décembre à 10 h"
 
 
-def test_opening_line_annonce_ia_et_enregistrement(ehpad, prospect):
+def test_opening_line_annonce_ia(ehpad, prospect):
     line = prompts.opening_line(ehpad, prospect)
-    assert "assistante commerciale virtuelle" in line and "enregistré" in line
-    assert "directeur" in line
+    assert "Sarah" in line and "assistante virtuelle" in line and "directeur" in line
+    assert "enregistré" not in line  # annoncé par le message du XiVO au décroché
+
+
+def test_opening_line_enregistrement_si_pas_de_message_xivo(ehpad, prospect):
+    assert "enregistré" in prompts.opening_line(ehpad, prospect, announce_recording=True)
 
 
 def test_opening_line_test(prospect):

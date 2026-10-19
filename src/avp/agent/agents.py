@@ -257,8 +257,9 @@ class AgentDecideur(_BaseProspectAgent):
         await super().on_enter()
         # Le décideur prend la parole tout de suite (présentation + accroche, cf. prompts/decideur.md).
         self.session.generate_reply(
-            instructions="Présentez-vous brièvement comme l'assistante commerciale virtuelle "
-            "d'OpteoLink, de la part de Jean-Baptiste Marin, puis dites l'accroche et demandez deux minutes."
+            instructions="Présentez-vous brièvement : Sarah, l'assistante virtuelle d'OpteoLink, une intelligence "
+            "artificielle qui organise les rendez-vous de Jean-Baptiste Marin. Puis dites l'accroche et demandez "
+            "deux minutes."
         )
 
     @function_tool

@@ -85,6 +85,9 @@ class Settings(BaseSettings):
     max_call_duration_s: int = 360
     ring_timeout_s: int = 40
     silence_timeout_s: int = 20
+    # Le XiVO joue au décroché un message annonçant l'enregistrement : la phrase d'ouverture n'en parle
+    # plus. À passer à false si ce message est retiré du XiVO (l'agent l'annonce alors lui-même).
+    annonce_enregistrement_par_xivo: bool = True
     # Court « D'accord. » dit dès la fin de la phrase du prospect, pendant que Claude prépare la suite.
     acquiescements: bool = True
     max_concurrent_calls: int = 2

@@ -14,7 +14,7 @@ Lire d'abord `docs/passation.md` (état du projet et décisions), puis `docs/arc
   - La logique pure (assemblage de prompts, planification, mapping Axonaut, parsing d'analyse, état d'appel) vit dans des modules **sans dépendance LiveKit**, pour être testable.
 - **Tests** : `tests/`, pytest, aucun appel réseau réel (clients injectés ou `httpx.MockTransport`). Un test ne doit jamais importer `livekit.agents`.
 - **Données** : tout ce qui est produit va dans `data/` (non versionné).
-- **Sécurité appel** : ne jamais retirer l'annonce IA + enregistrement, la vérification de la liste d'opposition, les plages horaires ni la durée maximale d'appel.
+- **Sécurité appel** : ne jamais retirer l'annonce IA (« Sarah, l'assistante virtuelle » dès la 1re phrase, à toute personne, y compris le standard), ni l'annonce d'enregistrement (message joué par le XiVO au décroché ; `ANNONCE_ENREGISTREMENT_PAR_XIVO=false` la remet dans la phrase d'ouverture), la vérification de la liste d'opposition, les plages horaires ni la durée maximale d'appel.
 
 ## Lancer les tests
 

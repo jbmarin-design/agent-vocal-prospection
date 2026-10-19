@@ -13,7 +13,7 @@ Déroulé d'un appel :
   1. lecture des métadonnées, chargement de la campagne, construction de la session ;
   2. démarrage de la session avec AgentAccueil (muet) ;
   3. AMD démarré AVANT la numérotation, puis create_sip_participant(wait_until_answered) ;
-  4. humain → phrase d'ouverture fixe (assistante virtuelle + enregistrement) ; répondeur → message ou raccrochage ;
+  4. humain → phrase d'ouverture fixe (Sarah, assistante virtuelle ; enregistrement annoncé par le XiVO) ; répondeur → message ou raccrochage ;
   5. conversation (accueil → décideur), garde-fous durée et silence ;
   6. fin : transcription + état écrits dans data/transcripts, base mise à jour, room supprimée.
 """
@@ -276,7 +276,8 @@ async def entrypoint(ctx: JobContext) -> None:
         ud.answered_at = datetime.now(UTC)
         ud.state.amd_result = "human"
         ud.opening_done = True
-        session.say(opening_line(campaign, meta.prospect), allow_interruptions=False)
+        session.say(opening_line(campaign, meta.prospect, announce_recording=not settings.annonce_enregistrement_par_xivo),
+                    allow_interruptions=False)
         tasks.append(asyncio.create_task(_duration_guard(ud, session)))
         return
 
@@ -376,7 +377,8 @@ async def entrypoint(ctx: JobContext) -> None:
                 await hang_up(ud, "messagerie", wait_s=0.3)
                 return
         ud.opening_done = True
-        session.say(opening_line(campaign, meta.prospect), allow_interruptions=False)
+        session.say(opening_line(campaign, meta.prospect, announce_recording=not settings.annonce_enregistrement_par_xivo),
+                    allow_interruptions=False)
         return  # la conversation se déroule ; la fin passe par les outils ou les garde-fous
 
     ud.state.outcome = amd_outcome
