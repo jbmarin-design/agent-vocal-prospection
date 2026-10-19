@@ -36,17 +36,20 @@ from .phone import to_national_fr
 
 logger = logging.getLogger("avp.prompts")
 
-Role = Literal["accueil", "decideur", "repondeur"]
+Role = Literal["appel", "accueil", "decideur", "repondeur"]
 
-ROLES: tuple[Role, ...] = ("accueil", "decideur", "repondeur")
+# « appel » : l'agent unique (standard puis décideur), seul utilisé en appel depuis le 19/10.
+# « accueil » et « decideur » restent affichables séparément (`avp prompt show --role`).
+ROLES: tuple[Role, ...] = ("appel", "accueil", "decideur", "repondeur")
 BASE_FILE = "base.md"
-ROLE_FILES: dict[Role, str] = {
-    "accueil": "accueil.md",
-    "decideur": "decideur.md",
-    "repondeur": "repondeur.md",
+ROLE_FILES: dict[Role, tuple[str, ...]] = {
+    "appel": ("accueil.md", "decideur.md"),
+    "accueil": ("accueil.md",),
+    "decideur": ("decideur.md",),
+    "repondeur": ("repondeur.md",),
 }
-# Fichiers pris en compte dans la version des prompts (un appel peut utiliser les trois rôles).
-PROMPT_FILES: tuple[str, ...] = (BASE_FILE, *ROLE_FILES.values())
+# Fichiers pris en compte dans la version des prompts.
+PROMPT_FILES: tuple[str, ...] = (BASE_FILE, "accueil.md", "decideur.md", "repondeur.md")
 
 COMPANY = "OpteoLink"
 HUMAN_NAME = "Jean-Baptiste Marin"
@@ -305,10 +308,10 @@ def context_section(
     else:
         lines.append(f"Tentative d'appel n° {attempt} : l'établissement a déjà été appelé {attempt - 1} fois.")
 
-    if role == "accueil":
+    if role in ("accueil", "appel"):
         lines.append(f"Phrase d'ouverture déjà prononcée au décroché : « {opening_line(campaign, prospect)} »")
 
-    if role == "decideur":
+    if role in ("decideur", "appel"):
         if transfer_available:
             lines.append(f"Transfert vers {HUMAN_NAME} : disponible, seulement si la personne le demande ou l'accepte.")
         else:
@@ -380,7 +383,7 @@ def build_instructions(
     directory = _prompts_dir(prompts_dir)
     variables = template_variables(campaign, prospect, now=now, attempt=attempt, timezone=timezone)
     base = render_template(_read_prompt(directory, BASE_FILE), variables)
-    role_text = render_template(_read_prompt(directory, ROLE_FILES[role]), variables)
+    role_text = "\n\n".join(render_template(_read_prompt(directory, f), variables) for f in ROLE_FILES[role])
     parts = [
         base,
         role_text,

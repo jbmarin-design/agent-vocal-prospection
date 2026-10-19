@@ -61,7 +61,7 @@ def test_opening_line_test(prospect):
     assert "test technique" in line and "virtuelle" in line
 
 
-@pytest.mark.parametrize("role", ["accueil", "decideur", "repondeur"])
+@pytest.mark.parametrize("role", ["appel", "accueil", "decideur", "repondeur"])
 def test_build_instructions_couches(role, ehpad, prospect):
     slot = datetime(2026, 10, 8, 12, 0, tzinfo=UTC)
     text = prompts.build_instructions(
@@ -73,6 +73,9 @@ def test_build_instructions_couches(role, ehpad, prospect):
     assert "[operateurs]" in text  # questions de la campagne
     assert "lundi 5 octobre 2026 à 10 h 32" in text  # contexte
     assert "Tentative d'appel n° 2" in text
+    if role == "appel":  # agent unique : standard, décideur, phrase d'ouverture et créneaux
+        assert "Premier temps" in text and "Second temps" in text
+        assert "Phrase d'ouverture déjà prononcée" in text and "jeudi 8 octobre à 14 h" in text
     if role == "decideur":
         assert "jeudi 8 octobre à 14 h" in text
         assert "2026-10-08T14:00:00" not in text  # plus d'outil RDV : pas de valeur iso à recopier

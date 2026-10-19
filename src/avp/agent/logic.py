@@ -53,6 +53,8 @@ END_OUTCOMES_DECIDEUR: tuple[CallOutcome, ...] = (
     CallOutcome.NON_QUALIFIE,
     CallOutcome.REFUS,
 )
+# Agent unique (AgentAppel) : toutes les issues de fin d'appel du standard et du décideur.
+END_OUTCOMES: tuple[CallOutcome, ...] = tuple(dict.fromkeys((*END_OUTCOMES_DECIDEUR, *END_OUTCOMES_ACCUEIL)))
 
 
 @dataclass

@@ -3,7 +3,7 @@
 - ``logic``   : logique pure et testable (état d'appel, issue par défaut, transcription,
                 règles AMD/répondeur, persistance de fin d'appel). N'importe pas LiveKit.
 - ``session`` : fabrique STT / LLM / TTS / VAD / détection de fin de tour depuis les Settings.
-- ``agents``  : AgentAccueil et AgentDecideur, avec leurs outils.
+- ``agents``  : AgentAppel (standard puis décideur) et AgentRepondeur, avec leurs outils.
 - ``worker``  : point d'entrée ``python -m avp.agent.worker start|dev|console|download-files``.
 
 Seuls ``session``, ``agents`` et ``worker`` importent ``livekit.agents`` / ``livekit.plugins``.

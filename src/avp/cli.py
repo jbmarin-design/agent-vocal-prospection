@@ -967,7 +967,7 @@ def build_parser() -> argparse.ArgumentParser:
     psp = p.add_subparsers(parser_class=_FrenchArgumentParser, dest="prompt_cmd", metavar="<action>", required=True)
     x = _sub(psp, "show", "affiche les instructions pour un prospect fictif", cmd_prompt_show)
     x.add_argument("campaign")
-    x.add_argument("--role", choices=["accueil", "decideur", "repondeur"], default="accueil",
+    x.add_argument("--role", choices=["appel", "accueil", "decideur", "repondeur"], default="appel",
                    help="rôle de l'agent (défaut : %(default)s)")
 
     p = _sub(sp, "postcall", "analyse post-appel et synchronisation Axonaut", cmd_postcall)

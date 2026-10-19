@@ -62,7 +62,7 @@ avp (planificateur)                LiveKit                     agent-worker     
       │                                │                              │◄───── décroché ────────────────│
       │                                │                              │ AMD : humain / répondeur / SVI │
       │                                │                              │ annonce IA + enregistrement    │
-      │                                │                              │ AgentAccueil ─handoff─► AgentDécideur
+      │                                │                              │ AgentAppel (standard puis décideur)
       │                                │                              │ outils : rdv, rappel, transfert, opposition, fin
       │                                │                              │ fin d'appel → écrit CallRecord + transcription
       │  avp postcall (Sonnet 5.5) ◄───────────── SQLite ─────────────┘
@@ -77,8 +77,8 @@ avp (planificateur)                LiveKit                     agent-worker     
    - répondeur : message court ou raccrochage, selon la campagne ;
    - SVI : tentative de navigation vers un humain, sinon raccrochage.
 5. **Conversation** :
-   - `AgentAccueil` annonce l'IA et l'enregistrement, puis demande le décideur. Il dispose de `passer_au_decideur` (handoff), `enregistrer_opposition` et `terminer_appel`.
-   - `AgentDecideur` déroule la qualification et propose les créneaux écrits dans ses consignes. Il dispose de `transferer_a_un_humain` (si `TRANSFER_TARGET` est renseigné), `enregistrer_opposition` et `terminer_appel`.
+   - Un **agent unique**, `AgentAppel` (depuis le 19/10/2026), mène tout l'appel : standard puis décideur. Ses consignes contiennent les deux parties (`prompts/accueil.md` + `prompts/decideur.md`) et les créneaux dès le départ. Avant, deux agents (accueil → décideur, outil `passer_au_decideur`) : Claude oubliait la bascule et restait sans créneaux.
+   - Outils : `enregistrer_opposition`, `terminer_appel`, et `transferer_a_un_humain` si `TRANSFER_TARGET` est renseigné.
    - **Aucun outil de prise de notes ni de RDV** : contacts, rappel, réponses de qualification et rendez-vous (créneau validé contre la liste proposée, sinon « à confirmer ») sont extraits de la transcription par l'analyse post-appel (étape 7). Avec des outils, Haiku oubliait de les appeler ou retardait sa réplique (tests des 16 et 17/10/2026).
    - **Fin d'appel déterministe** : `terminer_appel` puis la formule d'au revoir fixe (`CLOSING_LINE`) et le raccrochage. Filets de sécurité du worker si l'outil n'est pas appelé : l'agent a dit au revoir, ou le prospect a remercié et l'agent n'attend plus de réponse ; trois secondes sans reprise de la conversation, et l'appel se termine.
 6. **Fin d'appel** : le worker sérialise l'état (`CallState`) et l'historique de conversation dans `data/transcripts/<call_id>.json`, met à jour `calls` et `prospects` (statut, tentative suivante), puis supprime la room, ce qui raccroche.

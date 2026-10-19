@@ -11,7 +11,7 @@ Le worker ne reçoit que des dispatches explicites (agent_name) créées par l'o
 
 Déroulé d'un appel :
   1. lecture des métadonnées, chargement de la campagne, construction de la session ;
-  2. démarrage de la session avec AgentAccueil (muet) ;
+  2. démarrage de la session avec AgentAppel (muet) ;
   3. AMD démarré AVANT la numérotation, puis create_sip_participant(wait_until_answered) ;
   4. humain → phrase d'ouverture fixe (Sarah, assistante virtuelle ; enregistrement annoncé par le XiVO) ; répondeur → message ou raccrochage ;
   5. conversation (accueil → décideur), garde-fous durée et silence ;
@@ -36,7 +36,7 @@ from ..config import get_settings
 from ..livekit_admin import participant_identity_for, sip_headers_for
 from ..models import CallMetadata, CallOutcome
 from ..prompts import opening_line, prompt_version
-from .agents import AgentAccueil, AgentDecideur, AgentRepondeur, finish_call, hang_up
+from .agents import AgentAppel, AgentRepondeur, finish_call, hang_up
 from .logic import (
     GOODBYE_GRACE_S,
     PRESENCE_PROMPTS,
@@ -128,7 +128,7 @@ async def _warm_up_llm(llm, agents) -> None:
 async def _probe_presence(ud: CallUserData, session) -> bool:
     """Dit « Allô ? » (puis une relance) et attend que quelqu'un parle. Vrai si une voix répond.
 
-    La réponse (« Allô, oui ? ») est consommée par AgentAccueil.on_user_turn_completed sans
+    La réponse (« Allô, oui ? ») est consommée par AgentAppel.on_user_turn_completed sans
     déclencher de réponse du LLM : c'est la phrase d'ouverture fixe qui suit.
     """
     for prompt in PRESENCE_PROMPTS:
@@ -265,12 +265,10 @@ async def entrypoint(ctx: JobContext) -> None:
         ctx.shutdown("session fermée")
 
     # 2. Démarrage de la session -------------------------------------------------
-    accueil = AgentAccueil(ud)
-    await session.start(agent=accueil, room=ctx.room)
+    agent = AgentAppel(ud)
+    await session.start(agent=agent, room=ctx.room)
     if not console and not settings.dry_run:
-        # L'agent décideur n'existe qu'au passage de relais : on préchauffe une instance identique
-        # (mêmes consignes, l'heure étant celle du début de l'appel, cf. agents._instructions).
-        tasks.append(asyncio.create_task(_warm_up_llm(session.llm, [accueil, AgentDecideur(ud)])))
+        tasks.append(asyncio.create_task(_warm_up_llm(session.llm, [agent])))
 
     if console:
         ud.answered_at = datetime.now(UTC)

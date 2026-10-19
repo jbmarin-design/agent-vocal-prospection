@@ -329,6 +329,9 @@ def apply_analysis(
         if ans and qid not in state.answers:
             state.answers[qid] = ans
             added.append(f"réponse {qid}")
+    if analysis.decideur_joint and not state.decision_maker_reached:
+        state.decision_maker_reached = True
+        added.append("décideur joint")
     if not state.contact_name and analysis.interlocuteur:
         state.contact_name = analysis.interlocuteur
     if not state.contact_role and analysis.fonction:

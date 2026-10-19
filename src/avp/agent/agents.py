@@ -1,8 +1,8 @@
-"""Les deux agents de l'appel et leurs outils.
+"""L'agent de l'appel et ses outils.
 
-- ``AgentAccueil``  : franchit le standard, obtient le décideur (ou un rappel), puis passe la main.
-- ``AgentDecideur`` : qualifie, traite les objections, propose un RDV (créneaux dans ses consignes)
-  ou un rappel, transfère si c'est configuré.
+- ``AgentAppel``     : franchit le standard, puis échange avec le décideur, qualifie, traite les
+  objections, propose un RDV (créneaux dans ses consignes) ou un rappel, transfère si configuré.
+- ``AgentRepondeur`` : laisse un message sur un répondeur (sans outil).
 
 Les docstrings des outils sont lues par Claude pour décider quand les appeler : elles font
 partie du « prompt ». Les modifier change le comportement de l'agent.
@@ -28,8 +28,7 @@ from ..livekit_admin import participant_identity_for
 from ..models import CallOutcome
 from ..prompts import CLOSING_LINE, build_instructions
 from .logic import (
-    END_OUTCOMES_ACCUEIL,
-    END_OUTCOMES_DECIDEUR,
+    END_OUTCOMES,
     CallUserData,
     coerce_outcome,
     is_goodbye,
@@ -167,8 +166,22 @@ class _BaseProspectAgent(Agent):
         return None
 
 
-class AgentAccueil(_BaseProspectAgent):
-    role = "accueil"
+class AgentAppel(_BaseProspectAgent):
+    """L'agent unique de l'appel : franchit le standard, puis échange avec le décideur et propose un
+    rendez-vous. Toutes les consignes (standard, décideur, créneaux) sont présentes dès le départ.
+
+    Il y avait deux agents (accueil → décideur, avec l'outil passer_au_decideur) : Claude oubliait
+    la bascule et restait « accueil », sans les créneaux (test du 19/10). Un seul agent supprime
+    cette étape.
+    """
+
+    role = "appel"
+
+    def __init__(self, ud: CallUserData, **kwargs) -> None:
+        super().__init__(ud, **kwargs)
+        if not ud.settings.transfer_target:
+            # Transfert désactivé (TRANSFER_TARGET vide) : l'outil n'est même pas proposé à Claude.
+            self._tools = [t for t in self._tools if getattr(t, "id", "") != "transferer_a_un_humain"]
 
     async def on_user_turn_completed(self, turn_ctx, new_message) -> None:
         ud = self._ud
@@ -183,8 +196,7 @@ class AgentAccueil(_BaseProspectAgent):
         # Filet de sécurité : messagerie ou serveur vocal non détecté par l'AMD.
         ud.user_turns += 1
         if (
-            not ud.state.decision_maker_reached
-            and not ud.hangup_requested
+            not ud.hangup_requested
             and voicemail_window_open(ud.answered_at, datetime.now(UTC), ud.user_turns)
             and looks_like_voicemail(text)
         ):
@@ -199,67 +211,6 @@ class AgentAccueil(_BaseProspectAgent):
         if not ud.opening_done:
             raise StopResponse()
         await super().on_user_turn_completed(turn_ctx, new_message)
-
-    @function_tool
-    async def passer_au_decideur(
-        self, context: RunContext[CallUserData], nom: str = "", fonction: str = ""
-    ) -> Agent:
-        """À appeler dès que l'interlocuteur cible (ou une alternative acceptée par la campagne) est
-        en ligne et accepte d'échanger, y compris si c'est la personne qui a décroché. Ne dites
-        rien avant : l'agent décideur prend la suite et se présente.
-
-        Args:
-            nom: Nom de la personne (avec Madame ou Monsieur si connu).
-            fonction: Sa fonction (directeur, IDEC, cadre de santé…).
-        """
-        ud = context.userdata
-        ud.state.decision_maker_reached = True
-        if nom:
-            ud.state.contact_name = nom.strip()
-        if fonction:
-            ud.state.contact_role = fonction.strip()
-        logger.info("passage au décideur : %s (%s)", nom, fonction)
-        return AgentDecideur(ud, chat_ctx=self.chat_ctx.copy(exclude_instructions=True))
-
-    @function_tool
-    async def terminer_appel(self, context: RunContext[CallUserData], issue: str, resume: str = "") -> None:
-        """Termine l'appel. Dans la même réponse, avant l'outil, remerciez en une phrase. Ne dites pas
-        au revoir : la formule d'au revoir est dite automatiquement, puis l'appel raccroche.
-
-        Args:
-            issue: L'une de : rappel (la personne est à rappeler, ou un rappel est convenu), barrage (refus de passer la personne, sans rappel), refus (le décideur refuse dès l'accueil), mauvais_numero (mauvais numéro ou établissement inexistant), non_qualifie (établissement hors cible).
-            resume: Une phrase qui résume l'échange.
-        """
-        ud = context.userdata
-        outcome = coerce_outcome(issue, END_OUTCOMES_ACCUEIL)
-        if outcome is None:
-            raise ToolError(
-                "Issue invalide. Choisissez parmi : " + ", ".join(o.value for o in END_OUTCOMES_ACCUEIL)
-            )
-        ud.state.outcome = outcome
-        if resume:
-            ud.note(resume.strip())
-        _spawn(_finish_after_playout(context, f"fin : {outcome.value}"))
-        return None
-
-
-class AgentDecideur(_BaseProspectAgent):
-    role = "decideur"
-
-    def __init__(self, ud: CallUserData, **kwargs) -> None:
-        super().__init__(ud, **kwargs)
-        if not ud.settings.transfer_target:
-            # Transfert désactivé (TRANSFER_TARGET vide) : l'outil n'est même pas proposé à Claude.
-            self._tools = [t for t in self._tools if getattr(t, "id", "") != "transferer_a_un_humain"]
-
-    async def on_enter(self) -> None:
-        await super().on_enter()
-        # Le décideur prend la parole tout de suite (présentation + accroche, cf. prompts/decideur.md).
-        self.session.generate_reply(
-            instructions="Présentez-vous brièvement : Sarah, l'assistante virtuelle d'OpteoLink, une intelligence "
-            "artificielle qui organise les rendez-vous de Jean-Baptiste Marin. Puis dites l'accroche et demandez "
-            "deux minutes."
-        )
 
     @function_tool
     async def transferer_a_un_humain(self, context: RunContext[CallUserData], motif: str = "") -> str | None:
@@ -293,9 +244,7 @@ class AgentDecideur(_BaseProspectAgent):
         except Exception as e:  # SipCallError ou autre
             logger.warning("transfert échoué : %s", e)
             ud.note(f"transfert échoué : {e}")
-            return (
-                "Le transfert a échoué. Excusez-vous, puis proposez un rendez-vous ou un rappel."
-            )
+            return "Le transfert a échoué. Excusez-vous, puis proposez un rendez-vous ou un rappel."
         ud.state.transferred = True
         ud.state.outcome = CallOutcome.TRANSFERT
         ud.note(f"transféré : {motif}".strip())
@@ -308,15 +257,13 @@ class AgentDecideur(_BaseProspectAgent):
         au revoir : la formule d'au revoir est dite automatiquement, puis l'appel raccroche.
 
         Args:
-            issue: L'une de : rdv (un créneau accepté et l'email confirmé), rappel (rappel convenu), qualifie (intérêt sans RDV), non_qualifie (hors cible, pas de besoin), refus (pas intéressé).
+            issue: L'une de : rdv (le décideur a accepté un créneau et confirmé son email), rappel (la personne est à rappeler, ou un rappel est convenu), qualifie (le décideur montre de l'intérêt, sans rendez-vous), barrage (le standard refuse de passer la personne, sans rappel), refus (le décideur n'est pas intéressé), mauvais_numero (mauvais numéro ou établissement inexistant), non_qualifie (établissement hors cible ou aucun besoin).
             resume: Une phrase qui résume l'échange.
         """
         ud = context.userdata
-        outcome = coerce_outcome(issue, END_OUTCOMES_DECIDEUR)
+        outcome = coerce_outcome(issue, END_OUTCOMES)
         if outcome is None:
-            raise ToolError(
-                "Issue invalide. Choisissez parmi : " + ", ".join(o.value for o in END_OUTCOMES_DECIDEUR)
-            )
+            raise ToolError("Issue invalide. Choisissez parmi : " + ", ".join(o.value for o in END_OUTCOMES))
         ud.state.outcome = outcome
         if resume:
             ud.note(resume.strip())
