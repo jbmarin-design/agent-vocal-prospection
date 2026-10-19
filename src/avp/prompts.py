@@ -114,7 +114,7 @@ def format_datetime_fr(dt: datetime, timezone: str = "Europe/Paris") -> str:
 
 
 def slot_iso(dt: datetime, timezone: str = "Europe/Paris") -> str:
-    """Valeur ISO 8601 locale d'un créneau, à recopier telle quelle dans l'outil confirmer_rdv."""
+    """Valeur ISO 8601 locale d'un créneau (liste donnée à l'analyse post-appel pour le RDV)."""
     return _to_local(dt, timezone).replace(microsecond=0).isoformat()
 
 
@@ -322,17 +322,17 @@ def context_section(
         if slots:
             lines.append(
                 "Créneaux de rendez-vous disponibles. Ne proposez que ceux-ci, deux ou trois à la fois, "
-                "après avoir appelé l'outil proposer_creneaux. Pour confirmer, recopiez la valeur iso exacte."
+                "tels qu'écrits. Le rendez-vous est relevé automatiquement après l'appel."
             )
             if direct:
                 lines.append("Créneaux confirmés immédiatement, à proposer en premier :")
-                lines += [f"- {format_slot_fr(x, timezone)} — iso {slot_iso(x, timezone)}" for x in direct]
+                lines += [f"- {format_slot_fr(x, timezone)}" for x in direct]
             if to_confirm:
                 lines.append(
                     f"Créneaux sous réserve, à proposer seulement si aucun des précédents ne convient. "
                     f"Dites alors que {HUMAN_FIRST_NAME} confirmera ce créneau par email :"
                 )
-                lines += [f"- {format_slot_fr(x, timezone)} — iso {slot_iso(x, timezone)}" for x in to_confirm]
+                lines += [f"- {format_slot_fr(x, timezone)}" for x in to_confirm]
         else:
             lines.append(
                 f"Aucun créneau de rendez-vous n'est disponible : proposez que {HUMAN_FIRST_NAME} rappelle, "

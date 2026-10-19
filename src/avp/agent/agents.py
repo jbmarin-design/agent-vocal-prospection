@@ -1,13 +1,14 @@
 """Les deux agents de l'appel et leurs outils.
 
 - ``AgentAccueil``  : franchit le standard, obtient le décideur (ou un rappel), puis passe la main.
-- ``AgentDecideur`` : qualifie, traite les objections, prend RDV / transfère.
+- ``AgentDecideur`` : qualifie, traite les objections, propose un RDV (créneaux dans ses consignes)
+  ou un rappel, transfère si c'est configuré.
 
 Les docstrings des outils sont lues par Claude pour décider quand les appeler : elles font
 partie du « prompt ». Les modifier change le comportement de l'agent.
 
-Pas d'outil de prise de notes : contacts, rappel et réponses sont extraits de la transcription
-après l'appel (postcall.apply_analysis). Avec ces outils, Claude oubliait de les appeler ou
+Pas d'outil de prise de notes : contacts, rappel, réponses et rendez-vous sont extraits de la
+transcription après l'appel (postcall.apply_analysis). Avec ces outils, Claude oubliait de les appeler ou
 retardait sa réplique (tests des 16 et 17/10).
 
 Fin d'appel : un outil qui termine l'appel ne renvoie rien ; ``finish_call`` dit la formule
@@ -24,17 +25,15 @@ from livekit import api
 from livekit.agents import Agent, RunContext, StopResponse, ToolError, function_tool, get_job_context
 
 from ..livekit_admin import participant_identity_for
-from ..models import CallOutcome, Rdv
-from ..prompts import CLOSING_LINE, build_instructions, format_slot_fr
+from ..models import CallOutcome
+from ..prompts import CLOSING_LINE, build_instructions
 from .logic import (
     END_OUTCOMES_ACCUEIL,
     END_OUTCOMES_DECIDEUR,
     CallUserData,
     coerce_outcome,
     is_goodbye,
-    looks_like_email,
     looks_like_voicemail,
-    match_slot,
     pick_acknowledgement,
     voicemail_window_open,
 )
@@ -263,73 +262,6 @@ class AgentDecideur(_BaseProspectAgent):
         )
 
     @function_tool
-    async def proposer_creneaux(self, context: RunContext[CallUserData]) -> str:
-        """Donne les créneaux de rendez-vous disponibles avec Jean-Baptiste. À appeler avant de proposer
-        des créneaux à voix haute. Proposez-en deux ou trois, pas plus."""
-        ud = context.userdata
-        slots = sorted(ud.meta.rdv_slots)
-        if not slots:
-            return "Aucun créneau disponible. Proposez que Jean-Baptiste rappelle, et demandez quand."
-        ud.proposed_slots = slots
-        tz_name = ud.settings.timezone
-
-        def fmt(x) -> str:
-            return f"{format_slot_fr(x, tz_name)} (iso {x.astimezone(ud.tz).isoformat()})"
-
-        direct = [fmt(x) for x in slots if not ud.campaign.rdv.needs_confirmation(x, tz_name)]
-        later = [fmt(x) for x in slots if ud.campaign.rdv.needs_confirmation(x, tz_name)]
-        out = "Créneaux confirmés immédiatement : " + (" ; ".join(direct) or "aucun") + "."
-        if later:
-            out += (
-                " Seulement si aucun ne convient, créneaux sous réserve (Jean-Baptiste confirmera par email) : "
-                + " ; ".join(later) + "."
-            )
-        return out
-
-    @function_tool
-    async def confirmer_rdv(
-        self, context: RunContext[CallUserData], date_iso: str, email: str, nom: str = ""
-    ) -> str:
-        """Confirme le rendez-vous choisi par l'interlocuteur, après avoir vérifié son email.
-
-        Args:
-            date_iso: La valeur iso EXACTE du créneau choisi, recopiée depuis proposer_creneaux.
-            email: L'adresse email de la personne pour l'invitation, vérifiée avec elle.
-            nom: Le nom de la personne qui sera présente au rendez-vous.
-        """
-        ud = context.userdata
-        slots = ud.proposed_slots or list(ud.meta.rdv_slots)
-        slot = match_slot(date_iso, slots, ud.tz)
-        if slot is None:
-            raise ToolError("Ce créneau ne fait pas partie des créneaux proposés. Appelez proposer_creneaux.")
-        if not looks_like_email(email):
-            raise ToolError("Email invalide. Faites-le épeler et répétez-le pour vérifier.")
-        to_confirm = ud.campaign.rdv.needs_confirmation(slot, ud.settings.timezone)
-        ud.state.rdv = Rdv(
-            start=slot,
-            duree_min=ud.campaign.rdv.duree_min,
-            mode=ud.campaign.rdv.mode,
-            avec=(nom or ud.state.contact_name).strip(),
-            email=email.strip().lower(),
-            a_confirmer=to_confirm,
-        )
-        ud.state.contact_email = email.strip().lower()
-        if nom and not ud.state.contact_name:
-            ud.state.contact_name = nom.strip()
-        logger.info("RDV confirmé : %s (%s)", slot.isoformat(), email)
-        if to_confirm:
-            return (
-                f"Rendez-vous noté sous réserve pour le {format_slot_fr(slot, ud.settings.timezone)}. "
-                "Dites que Jean-Baptiste le confirmera par email dans la journée, à l'adresse donnée. "
-                "Récapitulez brièvement, remerciez, puis appelez terminer_appel avec l'issue rdv."
-            )
-        return (
-            f"Rendez-vous enregistré pour le {format_slot_fr(slot, ud.settings.timezone)}. "
-            "Dites qu'une invitation va arriver par email. "
-            "Récapitulez brièvement, remerciez, puis appelez terminer_appel avec l'issue rdv."
-        )
-
-    @function_tool
     async def transferer_a_un_humain(self, context: RunContext[CallUserData], motif: str = "") -> str | None:
         """Transfère l'appel à Jean-Baptiste, uniquement si l'interlocuteur l'a accepté. Avant d'appeler
         cet outil, annoncez dans la même réponse : « Je vous mets en relation, ne quittez pas. »
@@ -362,8 +294,7 @@ class AgentDecideur(_BaseProspectAgent):
             logger.warning("transfert échoué : %s", e)
             ud.note(f"transfert échoué : {e}")
             return (
-                "Le transfert a échoué. Excusez-vous, puis proposez un rendez-vous avec proposer_creneaux "
-                "ou un rappel."
+                "Le transfert a échoué. Excusez-vous, puis proposez un rendez-vous ou un rappel."
             )
         ud.state.transferred = True
         ud.state.outcome = CallOutcome.TRANSFERT
@@ -377,7 +308,7 @@ class AgentDecideur(_BaseProspectAgent):
         au revoir : la formule d'au revoir est dite automatiquement, puis l'appel raccroche.
 
         Args:
-            issue: L'une de : rdv (RDV confirmé avec confirmer_rdv), rappel (rappel convenu), qualifie (intérêt sans RDV), non_qualifie (hors cible, pas de besoin), refus (pas intéressé).
+            issue: L'une de : rdv (un créneau accepté et l'email confirmé), rappel (rappel convenu), qualifie (intérêt sans RDV), non_qualifie (hors cible, pas de besoin), refus (pas intéressé).
             resume: Une phrase qui résume l'échange.
         """
         ud = context.userdata
@@ -386,8 +317,6 @@ class AgentDecideur(_BaseProspectAgent):
             raise ToolError(
                 "Issue invalide. Choisissez parmi : " + ", ".join(o.value for o in END_OUTCOMES_DECIDEUR)
             )
-        if outcome is CallOutcome.RDV and ud.state.rdv is None:
-            raise ToolError("Pour l'issue rdv, appelez d'abord confirmer_rdv.")
         ud.state.outcome = outcome
         if resume:
             ud.note(resume.strip())

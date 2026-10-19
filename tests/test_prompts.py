@@ -74,7 +74,8 @@ def test_build_instructions_couches(role, ehpad, prospect):
     assert "lundi 5 octobre 2026 à 10 h 32" in text  # contexte
     assert "Tentative d'appel n° 2" in text
     if role == "decideur":
-        assert "jeudi 8 octobre à 14 h" in text and "2026-10-08T14:00:00+02:00" in text
+        assert "jeudi 8 octobre à 14 h" in text
+        assert "2026-10-08T14:00:00" not in text  # plus d'outil RDV : pas de valeur iso à recopier
 
 
 def test_build_instructions_role_inconnu(ehpad, prospect):

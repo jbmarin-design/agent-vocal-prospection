@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -36,8 +37,10 @@ from .models import (
     CallState,
     Campaign,
     ContactInfo,
+    Rdv,
 )
 from .phone import is_mobile_fr, to_national_fr
+from .prompts import format_slot_fr, slot_iso
 
 log = logging.getLogger("avp.postcall")
 
@@ -203,6 +206,10 @@ def build_user_message(record: CallRecordFile, settings: Settings) -> str:
             "## Fiche prospect",
             *fiche,
             "",
+            "## Créneaux de rendez-vous proposables pendant l'appel (valeur iso à recopier pour `rdv.start`)",
+            *([f"- {format_slot_fr(x, settings.timezone)} — iso {slot_iso(x, settings.timezone)}"
+               for x in sorted(record.metadata.rdv_slots)] or ["- aucun"]),
+            "",
             "## État enregistré par les outils de l'agent (CallState)",
             "```json",
             state_json,
@@ -255,6 +262,8 @@ def _postprocess(analysis: CallAnalysis, record: CallRecordFile, tz: ZoneInfo) -
     updates: dict[str, Any] = {}
     if analysis.date_relance is not None and analysis.date_relance.tzinfo is None:
         updates["date_relance"] = analysis.date_relance.replace(tzinfo=tz)
+    if analysis.rdv is not None and analysis.rdv.start.tzinfo is None:
+        updates["rdv"] = analysis.rdv.model_copy(update={"start": analysis.rdv.start.replace(tzinfo=tz)})
     if analysis.rappel and analysis.rappel.when is not None and analysis.rappel.when.tzinfo is None:
         updates["rappel"] = analysis.rappel.model_copy(update={"when": analysis.rappel.when.replace(tzinfo=tz)})
     # Le RDV confirmé par l'outil fait foi.
@@ -263,16 +272,52 @@ def _postprocess(analysis: CallAnalysis, record: CallRecordFile, tz: ZoneInfo) -
     return analysis.model_copy(update=updates) if updates else analysis
 
 
-def apply_analysis(state: CallState, analysis: CallAnalysis) -> list[str]:
+def apply_analysis(
+    state: CallState,
+    analysis: CallAnalysis,
+    *,
+    campaign: Campaign | None = None,
+    slots: Sequence[datetime] = (),
+    timezone: str = "Europe/Paris",
+) -> list[str]:
     """Reporte dans l'état d'appel ce que l'analyse a extrait de la transcription.
 
     Pendant l'appel, l'agent ne note plus rien (outils retirés : latence et oublis) ; contacts,
-    rappel et réponses viennent donc de Sonnet. Ce qui a déjà été enregistré par un outil n'est
-    jamais écrasé. Retourne la liste des éléments ajoutés (pour le journal).
+    rappel, réponses et rendez-vous viennent donc de Sonnet. Ce qui a déjà été enregistré par un
+    outil n'est jamais écrasé. Retourne la liste des éléments ajoutés (pour le journal).
+
+    Rendez-vous : le créneau doit être l'un des créneaux proposés (`slots`, à 2 minutes près).
+    Sinon, ou sans email valide, il est posé « à confirmer » : Jean-Baptiste valide avant l'invitation.
     """
-    from .agent.logic import merge_contact  # logique pure, sans LiveKit
+    from .agent.logic import looks_like_email, merge_contact  # logique pure, sans LiveKit
 
     added: list[str] = []
+    if analysis.rdv is not None and state.rdv is None:
+        start = analysis.rdv.start
+        aware = [s if s.tzinfo else s.replace(tzinfo=UTC) for s in slots]
+        matched = next((s for s in aware if abs((s - start).total_seconds()) <= 120), None)
+        email = analysis.rdv.email.strip().lower()
+        notes = []
+        if matched is None:
+            notes.append("créneau absent de la liste proposée : à vérifier")
+        if not looks_like_email(email):
+            notes.append(f"email à vérifier ({email or 'non donné'})")
+            email = ""
+        policy = campaign.rdv if campaign else None
+        state.rdv = Rdv(
+            start=matched or start,
+            duree_min=policy.duree_min if policy else 30,
+            mode=policy.mode if policy else "",
+            avec=analysis.rdv.avec or state.contact_name or analysis.interlocuteur,
+            email=email,
+            notes=" ; ".join(notes),
+            a_confirmer=bool(notes) or bool(policy and policy.needs_confirmation(matched or start, timezone)),
+        )
+        if email and not state.contact_email:
+            state.contact_email = email
+        if state.outcome in (None, CallOutcome.BARRAGE, CallOutcome.RAPPEL, CallOutcome.QUALIFIE):
+            state.outcome = CallOutcome.RDV
+        added.append("rdv" + (" à confirmer" if state.rdv.a_confirmer else ""))
     for c in analysis.contacts:
         if c.nom or c.prenom or c.email or c.telephone:
             merge_contact(state, c)
@@ -793,7 +838,8 @@ async def process_call(
 
     outcome_before = record.state.outcome
     if analysis:
-        added = apply_analysis(record.state, analysis)
+        added = apply_analysis(record.state, analysis, campaign=campaign, slots=record.metadata.rdv_slots,
+                               timezone=settings.timezone)
         if added:
             log.info("post-appel %s : extrait de la transcription : %s", call_id, ", ".join(added))
 

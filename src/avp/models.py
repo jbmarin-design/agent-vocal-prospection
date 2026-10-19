@@ -324,6 +324,14 @@ class CallRecordFile(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class RdvAnalyse(BaseModel):
+    """Rendez-vous accepté pendant l'appel, tel que relevé dans la transcription par l'analyse."""
+
+    start: datetime = Field(description="Créneau accepté : la valeur iso du créneau proposé, recopiée telle quelle")
+    email: str = Field(default="", description="Email donné pour l'invitation, reconstitué et confirmé")
+    avec: str = Field(default="", description="Nom de la personne qui sera présente")
+
+
 class CallAnalysis(BaseModel):
     score: Score
     score_num: int = Field(ge=0, le=100)
@@ -348,6 +356,7 @@ class CallAnalysis(BaseModel):
         default_factory=list, description="Personnes citées et leurs coordonnées, telles que confirmées"
     )
     rappel: Callback | None = Field(default=None, description="Rappel convenu : quand, qui demander")
+    rdv: RdvAnalyse | None = Field(default=None, description="Rendez-vous accepté par le prospect, sinon null")
     reponses: dict[str, str] = Field(
         default_factory=dict, description="Identifiant de question de qualification → réponse donnée"
     )

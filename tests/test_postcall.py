@@ -32,6 +32,7 @@ from avp.postcall import (
     analyze_call,
     apply_analysis,
     build_system_prompt,
+    build_user_message,
     process_call,
     process_pending,
     sync_axonaut,
@@ -152,7 +153,7 @@ async def test_analyze_call_success(tmp_path: Path):
     res = await analyze_call(record(CallOutcome.RDV, rdv=Rdv(start=START + timedelta(days=7))), campaign(),
                              client=llm, settings=st)
     assert res.score == "chaud" and res.score_num == 85
-    assert res.rdv_confirme is True  # forcé par l'outil confirmer_rdv
+    assert res.rdv_confirme is True  # forcé par le RDV déjà présent dans l'état d'appel
     assert res.date_relance is not None and res.date_relance.utcoffset() == timedelta(hours=1)
     call = llm.messages.calls[0]
     assert call["model"] == st.llm_analysis_model
@@ -474,3 +475,35 @@ async def test_process_call_enregistre_les_extractions(tmp_path: Path):
     assert row and row["outcome"] == "rappel"
     assert json.loads(row["state_json"])["contacts"][0]["email"] == "i.marin@laposte.net"
     assert "Marin" in ax.of("create_event")[0]["content"]  # contact repris dans l'événement Axonaut
+
+
+SLOT = datetime(2026, 10, 20, 8, 0, tzinfo=UTC)  # mardi 20/10 10 h à Paris (créneau direct)
+
+
+def test_apply_analysis_rdv_sur_un_creneau_propose():
+    st = CallState(outcome=CallOutcome.QUALIFIE, contact_name="Mme Marin")
+    an = analysis(rdv={"start": "2026-10-20T10:00:00+02:00", "email": "i.marin@laposte.net"})
+    assert apply_analysis(st, an, campaign=campaign(), slots=[SLOT]) == ["rdv"]
+    assert st.rdv is not None and st.rdv.start == SLOT and not st.rdv.a_confirmer
+    assert st.rdv.email == "i.marin@laposte.net" and st.rdv.avec == "Mme Marin"
+    assert st.outcome is CallOutcome.RDV and st.contact_email == "i.marin@laposte.net"
+
+
+@pytest.mark.parametrize(
+    "rdv",
+    [
+        {"start": "2026-10-21T15:00:00+02:00", "email": "i.marin@laposte.net"},  # créneau inventé
+        {"start": "2026-10-20T10:00:00+02:00", "email": "i point marin"},  # email inexploitable
+    ],
+)
+def test_apply_analysis_rdv_douteux_a_confirmer(rdv):
+    st = CallState(outcome=CallOutcome.RDV)
+    apply_analysis(st, analysis(rdv=rdv), campaign=campaign(), slots=[SLOT])
+    assert st.rdv is not None and st.rdv.a_confirmer and "à vérifier" in st.rdv.notes
+
+
+def test_user_message_liste_les_creneaux(tmp_path: Path):
+    rec = record(CallOutcome.RDV)
+    rec.metadata.rdv_slots = [SLOT]
+    msg = build_user_message(rec, settings_for(tmp_path))
+    assert "2026-10-20T10:00:00+02:00" in msg
