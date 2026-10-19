@@ -107,6 +107,7 @@ class Attendu(BaseModel):
     contacts_min: int = 0
     requis: list[str] = Field(default_factory=list, description="Regex : chacune doit apparaître chez l'agent")
     interdit: list[str] = Field(default_factory=list, description="Regex : aucune ne doit apparaître chez l'agent")
+    mots_max: int = Field(default=45, description="Longueur maximale d'une réplique de Sarah (consigne : 30 mots)")
 
 
 class Scenario(BaseModel):
@@ -132,7 +133,7 @@ class SimulationResult(BaseModel):
     resume: str = ""
     checks: list[Check] = Field(default_factory=list)
     erreur: str = ""
-    longues: list[str] = Field(default_factory=list, description="Répliques de l'agent de plus de 40 mots")
+    longues: list[str] = Field(default_factory=list, description="Répliques de l'agent de plus de 30 mots")
 
     @property
     def ok(self) -> bool:
@@ -189,6 +190,9 @@ def evaluate(result: SimulationResult) -> list[Check]:
     for rx in a.requis:
         hit = any(re.search(rx, t, re.IGNORECASE) for t in agent)
         checks.append(Check(nom=f"requis /{rx}/", ok=hit))
+    long_ones = [t for t in agent if len(t.split()) > a.mots_max and t != agent[0]]
+    checks.append(Check(nom=f"répliques ≤ {a.mots_max} mots", ok=not long_ones,
+                        detail="; ".join(f"{len(t.split())} mots" for t in long_ones)))
     for rx in a.interdit:
         bad = next((t for t in agent if re.search(rx, t, re.IGNORECASE)), "")
         checks.append(Check(nom=f"interdit /{rx}/", ok=not bad, detail=bad[:120]))
@@ -315,7 +319,7 @@ async def run_scenario(
             result.score, result.resume = f"{analysis.score} {analysis.score_num}", analysis.resume
         except Exception as exc:  # noqa: BLE001
             result.erreur = f"analyse : {exc}"
-    result.longues = [t.text for t in transcript if t.role == "agent" and len(t.text.split()) > 40]
+    result.longues = [t.text for t in transcript if t.role == "agent" and len(t.text.split()) > 30]
     result.checks = evaluate(result)
     return result
 

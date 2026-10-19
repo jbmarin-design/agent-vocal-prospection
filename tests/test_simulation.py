@@ -82,7 +82,8 @@ async def test_prospect_raccroche_et_controle_ko(tmp_path: Path):
     res = await run_scenario(sc, load_campaign("ehpad", PROJECT_ROOT / "campaigns"), client=llm,
                              settings=settings(tmp_path), slots=[SLOT], now=NOW)
     assert res.fin == "le prospect a raccroché"
-    assert not res.ok and "trente pour cent" in res.checks[0].detail
+    interdit = next(c for c in res.checks if c.nom.startswith("interdit"))
+    assert not res.ok and not interdit.ok and "trente pour cent" in interdit.detail
 
 
 def test_scenarios_ehpad_valides():
