@@ -306,6 +306,29 @@ COMPLAINT_HINT = (
 )
 
 
+_OPTOUT_PATTERNS = (
+    r"ne (?:m['’]|nous )(?:appelez|rappelez|contactez) plus", r"(?:retirez|supprimez|effacez|rayez) (?:mon|notre|nos|le) "
+    r"(?:num[ée]ro|coordonn[ée]es|fiche|ligne)", r"bloctel", r"liste (?:rouge|d['’]opposition)",
+    r"(?:ne plus|plus jamais) (?:[êe]tre )?(?:appel[ée]e?s?|d[ée]march[ée]e?s?|contact[ée]e?s?)",
+    r"(?:veux|souhaite) plus (?:[êe]tre )?(?:appel[ée]e?s?|d[ée]march[ée]e?s?|contact[ée]e?s?)",
+    r"arr[êe]tez (?:de (?:m['’]|nous )|d['’])appeler",
+)
+OPTOUT_LINE = "Je comprends, excusez-moi du dérangement. C'est noté, nous ne vous rappellerons plus."
+
+
+def is_optout_request(text: str) -> bool:
+    """Vrai si le prospect demande explicitement à ne plus être appelé (règle 6, obligation légale).
+
+    Traité sans Claude (phrase fixe, opposition, raccrochage) : malgré la consigne ciblée, Haiku
+    glissait parfois encore une proposition (simulations du 19/10). Une plainte plus floue
+    (« encore du démarchage ») reste traitée par Claude avec COMPLAINT_HINT (`is_complaint`).
+    """
+    import re
+
+    t = (text or "").lower()
+    return any(re.search(p, t) for p in _OPTOUT_PATTERNS)
+
+
 def is_complaint(text: str) -> bool:
     """Vrai si le prospect se plaint du démarchage ou demande à ne plus être appelé (règle 6).
 

@@ -402,3 +402,19 @@ def test_spell_letters_fr_morceau_sans_delimiteur_avant():
 )
 def test_is_complaint(text, expected):
     assert logic.is_complaint(text) is expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Retirez mon numéro, ne m'appelez plus jamais.", True),
+        ("Je suis inscrite sur Bloctel.", True),
+        ("Je ne veux plus être démarchée.", True),
+        ("Arrêtez de nous appeler !", True),
+        ("C'est du démarchage ?", False),
+        ("Encore du démarchage, c'est pénible.", False),
+        ("Rappelez-moi plutôt jeudi.", False),
+    ],
+)
+def test_is_optout_request(text, expected):
+    assert logic.is_optout_request(text) is expected

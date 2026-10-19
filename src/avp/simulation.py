@@ -26,7 +26,15 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, Field
 
-from .agent.logic import COMPLAINT_HINT, infer_outcome, is_complaint, is_goodbye, realtime_llm_options
+from .agent.logic import (
+    COMPLAINT_HINT,
+    OPTOUT_LINE,
+    infer_outcome,
+    is_complaint,
+    is_goodbye,
+    is_optout_request,
+    realtime_llm_options,
+)
 from .config import Settings, get_settings
 from .models import (
     CallMetadata,
@@ -270,6 +278,12 @@ async def run_scenario(
                 agent_msgs.append({"role": "user", "content": reply})
             if hung_up:
                 fin = "le prospect a raccroché"
+                break
+            if is_optout_request(reply):  # même traitement sans Claude qu'en appel réel
+                state.optout, state.outcome, state.optout_reason = True, CallOutcome.OPPOSITION, reply[:200]
+                say("agent", OPTOUT_LINE)
+                say("agent", CLOSING_LINE)
+                fin = "opposition (phrase fixe)"
                 break
             # --- Sarah répond (avec un éventuel aller-retour si un outil renvoie une erreur)
             system = [{"type": "text", "text": instructions, "cache_control": {"type": "ephemeral"}}]

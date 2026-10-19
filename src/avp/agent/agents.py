@@ -31,11 +31,13 @@ from .logic import (
     COMPLAINT_HINT,
     END_OUTCOMES,
     INTERJECTION_BUFFER_CHARS,
+    OPTOUT_LINE,
     SPELLING_DELIMITERS,
     CallUserData,
     coerce_outcome,
     is_complaint,
     is_goodbye,
+    is_optout_request,
     looks_like_voicemail,
     pick_acknowledgement,
     spell_letters_fr,
@@ -145,6 +147,14 @@ class _BaseProspectAgent(Agent):
         """
         ud = self._ud
         text = getattr(new_message, "text_content", "") or ""
+        if is_optout_request(text) and not (ud.hangup_requested or ud.closing):
+            # « Ne m'appelez plus » : obligation légale, traitée sans Claude.
+            ud.state.optout, ud.state.outcome = True, CallOutcome.OPPOSITION
+            ud.state.optout_reason = text.strip()[:200]
+            logger.info("opposition demandée : %s", text[:120])
+            handle = self.session.say(OPTOUT_LINE, allow_interruptions=False)
+            _spawn(self._finish_after(handle, "opposition"))
+            raise StopResponse()
         if is_complaint(text):
             # Plainte contre le démarchage : consigne ciblée pour cette réplique, pas de petit mot.
             turn_ctx.add_message(role="system", content=COMPLAINT_HINT)
@@ -156,6 +166,13 @@ class _BaseProspectAgent(Agent):
             ud.last_ack = ack
             ud.strip_interjection = True
             self.session.say(ack, allow_interruptions=True, add_to_chat_ctx=False)
+
+    async def _finish_after(self, handle, reason: str) -> None:
+        try:
+            await handle.wait_for_playout()
+        except Exception:  # pragma: no cover - session fermée
+            pass
+        await finish_call(self.session, self._ud, reason)
 
     def tts_node(self, text, model_settings):
         """Avant la synthèse vocale :
