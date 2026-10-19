@@ -295,7 +295,7 @@ def spell_letters_fr(text: str, *, at_boundary: bool = True) -> str:
 
 
 _COMPLAINT_PATTERNS = (
-    r"d[ée]marchage", r"d[ée]march[ée]e?s?\b", r"p[ée]nible", r"harc[eè]l\w*", r"arr[êe]tez (?:de|d['’])", r"on en re[çc]oit",
+    r"d[ée]marchage", r"d[ée]march(?:é|ée|és|ées)\b", r"p[ée]nible", r"harc[eè]l\w*", r"arr[êe]tez (?:de|d['’])", r"on en re[çc]oit",
     r"ras[- ]le[- ]bol", r"ne (?:m['’]|nous )appelez plus", r"retirez", r"bloctel", r"liste rouge",
     r"ne plus (?:[êe]tre )?(?:appel|d[ée]march)",
 )
