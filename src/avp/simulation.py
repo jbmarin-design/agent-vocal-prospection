@@ -107,6 +107,7 @@ class Attendu(BaseModel):
     contacts_min: int = 0
     requis: list[str] = Field(default_factory=list, description="Regex : chacune doit apparaître chez l'agent")
     interdit: list[str] = Field(default_factory=list, description="Regex : aucune ne doit apparaître chez l'agent")
+    rdv_email: str = Field(default="", description="Email attendu dans le RDV relevé (contrôle de l'épellation)")
     mots_max: int = Field(default=45, description="Longueur maximale d'une réplique de Sarah (consigne : 30 mots)")
 
 
@@ -117,6 +118,7 @@ class Scenario(BaseModel):
     contact: str = Field(default="", description="Décideur connu de la fiche prospect (vide : inconnu)")
     max_tours: int = 14
     attendu: Attendu = Field(default_factory=Attendu)
+    a_valider: str = Field(default="", description="Ce qu'un humain doit vérifier en lisant la transcription")
 
 
 class Check(BaseModel):
@@ -182,6 +184,10 @@ def evaluate(result: SimulationResult) -> list[Check]:
         detail = "aucun" if not got else f"{st.rdv.start.isoformat()} {st.rdv.email or '(sans email)'}" + (
             " à confirmer" if st.rdv.a_confirmer else "")
         checks.append(Check(nom="rdv", ok=got == a.rdv, detail=detail))
+    if a.rdv_email:
+        got_email = st.rdv.email if st.rdv else ""
+        checks.append(Check(nom="email du rdv", ok=got_email.lower() == a.rdv_email.lower(),
+                            detail=f"{got_email or '—'} (attendu : {a.rdv_email})"))
     if a.optout is not None:
         checks.append(Check(nom="opposition", ok=st.optout == a.optout, detail=str(st.optout)))
     if a.contacts_min:
@@ -354,6 +360,8 @@ def format_result(r: SimulationResult) -> str:
         lines.append(f"   {'ok ' if c.ok else 'KO '} {c.nom}{f' : {c.detail}' if c.detail else ''}")
     for t in r.longues:
         lines.append(f"   ⚠ réplique longue ({len(t.split())} mots) : {t[:100]}…")
+    if r.scenario.a_valider:
+        lines.append(f"   👀 à valider à la lecture : {r.scenario.a_valider}")
     lines.append("   --- transcription")
     for t in r.record.transcript:
         who = "Sarah   " if t.role == "agent" else "Prospect"

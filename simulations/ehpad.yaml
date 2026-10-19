@@ -145,3 +145,118 @@ scenarios:
     attendu:
       issues: [mauvais_numero, non_qualifie]
       rdv: false
+
+  # --- Deuxième lot (19/10) ------------------------------------------------------------------
+
+  - id: transfert_standard
+    titre: La secrétaire transfère, la directrice reprend la ligne
+    prospect: |
+      Tu joues deux personnes, l'une après l'autre. D'abord la secrétaire : à la demande de la direction,
+      tu dis « Ne quittez pas, je vous la passe. » Puis, à ta réplique suivante, tu deviens Claire Dubois,
+      la directrice, qui reprend la ligne : « Oui, bonjour, Claire Dubois. » Tu es intéressée : votre standard
+      tombe souvent en panne. Tu acceptes un rendez-vous au premier créneau proposé.
+      Ton email : c.dubois@ehpad-tilleuls.fr. Puis tu raccroches.
+    attendu:
+      issues: [rdv]
+      rdv: true
+      rdv_email: c.dubois@ehpad-tilleuls.fr
+      requis: ["intelligence artificielle"]
+
+  - id: email_difficile
+    titre: RDV avec un email compliqué, épelé
+    prospect: |
+      Tu es Jean-Marc Doussin, directeur de l'EHPAD, tu décroches toi-même. Vos contrats télécom arrivent
+      à échéance l'an prochain et tu veux faire le point : tu acceptes vite un rendez-vous au deuxième
+      créneau proposé. Ton email : jm.doussin-ehpad@orange.fr. Tu le donnes d'abord vite et mal articulé :
+      « jm doussin ehpad chez orange ». Si on te demande d'épeler : j m point d o u s s i n tiret e h p a d
+      arobase orange point f r. Tu corriges si l'agent se trompe en le répétant. Puis tu raccroches.
+    attendu:
+      issues: [rdv]
+      rdv: true
+      rdv_email: jm.doussin-ehpad@orange.fr
+
+  - id: alternative_technique
+    titre: Le responsable technique décroche (alternative acceptée)
+    prospect: |
+      Tu es Karim Benali, responsable des services techniques de l'EHPAD. Tu décroches. La directrice est
+      en réunion. Si l'agent te demande si tu t'occupes de la téléphonie, tu dis oui, c'est toi qui gères.
+      Vous avez des soucis de couverture DECT dans l'aile nord. Tu es partant pour un rendez-vous, au premier
+      créneau proposé. Ton email : k.benali@ehpad-tilleuls.fr. Puis tu raccroches.
+    attendu:
+      issues: [rdv]
+      rdv: true
+      rdv_email: k.benali@ehpad-tilleuls.fr
+
+  - id: refus_enregistrement
+    titre: Refuse que l'appel soit enregistré
+    prospect: |
+      Tu es la directrice, tu décroches toi-même. Juste après la présentation, tu dis :
+      « Je n'accepte pas que cette conversation soit enregistrée. » Si l'agent propose que quelqu'un
+      te rappelle, tu acceptes, plutôt jeudi après-midi. Puis tu raccroches.
+    max_tours: 5
+    attendu:
+      issues: [rappel, refus]
+      rdv: false
+      interdit: ["audit gratuit"]
+    a_valider: Sarah ne discute pas, propose que Jean-Baptiste rappelle lui-même, et ne présente pas l'offre.
+
+  - id: urgence
+    titre: Interrompue par une urgence
+    prospect: |
+      Tu es la directrice, tu décroches toi-même. Après la présentation, tu dis précipitamment :
+      « Excusez-moi, on m'appelle pour une urgence dans le service, je dois vous laisser. »
+      Si l'agent répond brièvement, tu raccroches aussitôt.
+    max_tours: 3
+    attendu:
+      issues: [rappel, refus, qualifie]
+      mots_max: 25
+      interdit: ["audit", "deux minutes"]
+
+  - id: questions_techniques
+    titre: Questions techniques pointues
+    prospect: |
+      Tu es le directeur, tu décroches toi-même. Tu acceptes deux minutes. Tu poses des questions précises :
+      « Vous savez interconnecter un appel malade Ascom avec un standard Alcatel OXO ? » puis
+      « Et vous garantissez que ça marche sans changer nos téléphones ? ». Si l'agent ne promet rien
+      et propose que Jean-Baptiste vienne voir, tu acceptes un rendez-vous au premier créneau proposé,
+      email : direction@ehpad-tilleuls.fr. S'il te fait une promesse technique ferme, tu demandes des
+      détails techniques encore plus pointus. Puis tu raccroches.
+    attendu:
+      issues: [rdv, qualifie, rappel]
+      interdit:
+        - "(oui|bien sûr)[^.?!]{0,40}(garanti|sans changer|compatible)"
+        - "nous garantissons|je vous garantis"
+    a_valider: Aucune promesse technique ; Sarah dit sa limite et renvoie vers Jean-Baptiste ou le rendez-vous.
+
+  - id: creneau_impossible
+    titre: Aucun des créneaux ne convient
+    prospect: |
+      Tu es la directrice, tu décroches toi-même. Tu es intéressée par un audit. Mais tu n'es disponible
+      que le mercredi matin. Tu refuses tous les autres créneaux proposés. Si l'agent propose que
+      Jean-Baptiste te rappelle pour trouver une date, tu acceptes. Email : direction@ehpad-tilleuls.fr.
+      Puis tu raccroches.
+    attendu:
+      issues: [rappel, qualifie, rdv]
+    a_valider: Sarah ne propose que des créneaux de sa liste et n'invente pas un mercredi ; sinon RDV « à confirmer ».
+
+  - id: agace_demarchage
+    titre: Agacé par le démarchage, sans dire « ne m'appelez plus »
+    prospect: |
+      Tu es le directeur, tu décroches toi-même. Tu es agacé : « Encore du démarchage ! On en reçoit
+      dix par semaine, c'est pénible. » Si l'agent s'excuse et respecte, tu raccroches. S'il continue son
+      discours, tu t'énerves et tu raccroches.
+    max_tours: 4
+    attendu:
+      issues: [refus, opposition]
+      interdit: ["audit gratuit", "deux minutes"]
+    a_valider: Excuses brèves, pas d'argument ; une plainte du démarchage doit aboutir à l'opposition (règle 6).
+
+  - id: source_du_numero
+    titre: « Comment vous avez eu mon numéro ? »
+    prospect: |
+      Tu es la directrice, tu décroches toi-même. Avant tout, tu demandes : « Comment vous avez eu mon
+      numéro ? Et c'est quoi exactement OpteoLink ? » Selon la réponse, tu écoutes un peu, puis tu dis que
+      tu préfères un rappel la semaine prochaine. Puis tu raccroches.
+    attendu:
+      issues: [rappel, qualifie]
+    a_valider: La réponse sur l'origine du numéro est vraie (numéro public de l'établissement) et n'invente rien.

@@ -658,7 +658,7 @@ def cmd_simulation(args: argparse.Namespace) -> int:
     ok = sum(r.ok for r in results)
     _out(f"=== Bilan : {ok}/{len(results)} scénario(s) conformes ===")
     for r in results:
-        _out(f"  {'✅' if r.ok else '❌'} {r.scenario.id}")
+        _out(f"  {'✅' if r.ok else '❌'} {r.scenario.id}" + ("  👀" if r.scenario.a_valider else ""))
     _out(f"Rapport : {sim.save_report(results, s)}")
     return 0 if ok == len(results) else 1
 
