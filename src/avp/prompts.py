@@ -66,6 +66,10 @@ OPENING_DISCLOSURE = f"Bonjour, ici {AGENT_NAME}, l'assistante virtuelle d'Opteo
 OPENING_RECORDING = "Cet appel est enregistré."
 OPENING_ASK = "Pourrais-je parler {cible}, s'il vous plaît ?"
 OPENING_TEST = "Il s'agit d'un test technique d'OpteoLink, cela ne prendra qu'une minute."
+LENGTH_REMINDER = (
+    "Rappel, à chaque réplique : trente mots au maximum, une ou deux phrases, un seul paragraphe. "
+    "Une seule idée, puis vous laissez parler votre interlocuteur."
+)
 # Au revoir FIXE, dit par le worker en fin d'appel (agents.finish_call), jamais par Claude.
 CLOSING_LINE = "Je vous souhaite une très bonne journée. Au revoir."
 
@@ -341,6 +345,9 @@ def context_section(
                 f"Aucun créneau de rendez-vous n'est disponible : proposez que {HUMAN_FIRST_NAME} rappelle, "
                 "et demandez quand."
             )
+    if role != "repondeur":
+        # En dernier : la consigne la plus souvent enfreinte (répliques de 45 à 95 mots en simulation).
+        lines += ["", LENGTH_REMINDER]
     return "\n".join(lines)
 
 
