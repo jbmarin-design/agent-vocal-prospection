@@ -74,6 +74,7 @@ class CallUserData:
     hangup_requested: bool = False
     closing: bool = False  # au revoir final en cours (finish_call)
     last_ack: str = ""  # dernier acquiescement dit (pour varier)
+    strip_interjection: bool = False  # un acquiescement vient d'être dit : épurer le début de la réponse
     opening_done: bool = False  # phrase d'ouverture lancée : avant, Claude ne répond à rien
     finalized: bool = False
     usage: dict[str, Any] = field(default_factory=dict)
@@ -242,6 +243,27 @@ def pick_acknowledgement(user_text: str, previous: str = "", *, choice=None) -> 
         return None
     options = [a for a in ACKNOWLEDGEMENTS if a != previous] or list(ACKNOWLEDGEMENTS)
     return (choice or random.choice)(options)
+
+
+_LEADING_INTERJECTION = (
+    r"^\s*(?:(?:d['’]accord|ok(?:ay)?|bien|très bien|tres bien|parfait|je vois|je comprends|entendu|ah|super)"
+    r"(?:\s*[,.!]+\s*|\s+(?=[a-zàâçéèêëîïôûùüÿ])))+"
+)
+INTERJECTION_BUFFER_CHARS = 30
+
+
+def strip_leading_interjection(text: str) -> str:
+    """Retire les interjections en tête de la réponse de Claude (« D'accord, donc… » → « Donc… »).
+
+    Utilisé quand un acquiescement automatique vient d'être dit : sinon on entendait « Ok. D'accord,
+    donc… » (test du 19/10). La première lettre restante passe en majuscule.
+    """
+    import re
+
+    rest = re.sub(_LEADING_INTERJECTION, "", text or "", count=1, flags=re.IGNORECASE)
+    if rest == text:
+        return text
+    return rest[:1].upper() + rest[1:]
 
 
 def voicemail_window_open(answered_at: datetime | None, now: datetime, user_turns: int) -> bool:

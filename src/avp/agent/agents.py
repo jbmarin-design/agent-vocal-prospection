@@ -29,11 +29,13 @@ from ..models import CallOutcome
 from ..prompts import CLOSING_LINE, build_instructions
 from .logic import (
     END_OUTCOMES,
+    INTERJECTION_BUFFER_CHARS,
     CallUserData,
     coerce_outcome,
     is_goodbye,
     looks_like_voicemail,
     pick_acknowledgement,
+    strip_leading_interjection,
     voicemail_window_open,
 )
 
@@ -143,7 +145,33 @@ class _BaseProspectAgent(Agent):
         ack = pick_acknowledgement(getattr(new_message, "text_content", "") or "", ud.last_ack)
         if ack:
             ud.last_ack = ack
+            ud.strip_interjection = True
             self.session.say(ack, allow_interruptions=True, add_to_chat_ctx=False)
+
+    def tts_node(self, text, model_settings):
+        """Avant la synthèse vocale : si un acquiescement vient d'être dit, retire les interjections
+        en tête de la réponse de Claude (« D'accord, donc… »), pour ne pas en entendre deux de suite."""
+        return Agent.default.tts_node(self, self._epure(text), model_settings)
+
+    async def _epure(self, text):
+        buf, decided = "", False
+        async for chunk in text:
+            if decided:
+                yield chunk
+                continue
+            buf += chunk
+            if len(buf) >= INTERJECTION_BUFFER_CHARS:
+                decided = True
+                yield self._epure_head(buf)
+        if not decided and buf:
+            yield self._epure_head(buf)
+
+    def _epure_head(self, head: str) -> str:
+        ud = self._ud
+        if head.strip() == ud.last_ack or not ud.strip_interjection:
+            return head  # l'acquiescement lui-même, ou réponse sans acquiescement avant
+        ud.strip_interjection = False
+        return strip_leading_interjection(head)
 
     # -- Outils communs ------------------------------------------------------
 
