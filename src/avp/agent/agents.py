@@ -30,11 +30,13 @@ from ..prompts import CLOSING_LINE, build_instructions
 from .logic import (
     END_OUTCOMES,
     INTERJECTION_BUFFER_CHARS,
+    SPELLING_DELIMITERS,
     CallUserData,
     coerce_outcome,
     is_goodbye,
     looks_like_voicemail,
     pick_acknowledgement,
+    spell_letters_fr,
     strip_leading_interjection,
     voicemail_window_open,
 )
@@ -149,22 +151,32 @@ class _BaseProspectAgent(Agent):
             self.session.say(ack, allow_interruptions=True, add_to_chat_ctx=False)
 
     def tts_node(self, text, model_settings):
-        """Avant la synthèse vocale : si un acquiescement vient d'être dit, retire les interjections
-        en tête de la réponse de Claude (« D'accord, donc… »), pour ne pas en entendre deux de suite."""
+        """Avant la synthèse vocale :
+        - si un acquiescement vient d'être dit, retire les interjections en tête de la réponse de
+          Claude (« D'accord, donc… »), pour ne pas en entendre deux de suite ;
+        - écrit en français le nom des lettres épelées (sinon « I » est lu à l'anglaise).
+        """
         return Agent.default.tts_node(self, self._epure(text), model_settings)
 
     async def _epure(self, text):
-        buf, decided = "", False
+        buf, head_done, at_boundary = "", False, True
         async for chunk in text:
-            if decided:
-                yield chunk
-                continue
             buf += chunk
-            if len(buf) >= INTERJECTION_BUFFER_CHARS:
-                decided = True
-                yield self._epure_head(buf)
-        if not decided and buf:
-            yield self._epure_head(buf)
+            if not head_done:
+                if len(buf) < INTERJECTION_BUFFER_CHARS:
+                    continue
+                buf, head_done = self._epure_head(buf), True
+            # On ne retient que la fin non terminée (après la dernière virgule ou ponctuation) :
+            # une lettre épelée se reconnaît à ses deux délimiteurs.
+            cut = max(buf.rfind(c) for c in SPELLING_DELIMITERS) + 1
+            if cut:
+                piece, buf = buf[:cut], buf[cut:]
+                yield spell_letters_fr(piece, at_boundary=at_boundary)
+                at_boundary = piece.rstrip()[-1:] in (",", ":")
+        if buf:
+            if not head_done:
+                buf = self._epure_head(buf)
+            yield spell_letters_fr(buf, at_boundary=at_boundary)
 
     def _epure_head(self, head: str) -> str:
         ud = self._ud

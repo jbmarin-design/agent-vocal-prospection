@@ -368,3 +368,22 @@ def test_acquiescement_varie():
 )
 def test_strip_leading_interjection(text, expected):
     assert logic.strip_leading_interjection(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Je répète : i, point, marin, arobase, laposte, point, net.",
+         "Je répète : i, point, marin, arobase, laposte, point, net."),
+        ("Je répète : I, point, m, a, r, i, n, arobase, orange, point, fr.",
+         "Je répète : i, point, èm, a, èr, i, èn, arobase, orange, point, fr."),
+        ("Il y a, bien sûr, une solution.", "Il y a, bien sûr, une solution."),
+        ("d, o, y.", "dé, o, i grec."),
+    ],
+)
+def test_spell_letters_fr(text, expected):
+    assert logic.spell_letters_fr(text) == expected
+
+
+def test_spell_letters_fr_morceau_sans_delimiteur_avant():
+    assert logic.spell_letters_fr("m, a", at_boundary=False) == "m, a"

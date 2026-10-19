@@ -266,6 +266,34 @@ def strip_leading_interjection(text: str) -> str:
     return rest[:1].upper() + rest[1:]
 
 
+# Nom des lettres en français, écrit pour la synthèse vocale : une lettre isolée (« I ») était lue à
+# l'anglaise quand Sarah épelait un email (test du 19/10).
+LETTER_NAMES_FR: dict[str, str] = {
+    "a": "a", "b": "bé", "c": "cé", "d": "dé", "e": "eu", "f": "èf", "g": "gé", "h": "hache", "i": "i",
+    "j": "ji", "k": "ka", "l": "èl", "m": "èm", "n": "èn", "o": "o", "p": "pé", "q": "ku", "r": "èr",
+    "s": "èss", "t": "té", "u": "u", "v": "vé", "w": "double vé", "x": "iks", "y": "i grec", "z": "zèd",
+}
+_SPELLED_LETTER = r"(?:(?<=[,:])|{start})\s*([A-Za-z])\s*(?=[,.])"
+SPELLING_DELIMITERS = ",.!?;:"
+
+
+def spell_letters_fr(text: str, *, at_boundary: bool = True) -> str:
+    """Remplace les lettres épelées (« i, point, m, a, r, i, n ») par leur nom en français.
+
+    Une lettre est « épelée » si elle est seule entre deux virgules (ou après « : », ou en début de
+    morceau quand `at_boundary`) et suivie d'une virgule ou d'un point. « il y a, bien sûr » n'est
+    pas touché (« a » n'est pas précédé d'une virgule).
+    """
+    import re
+
+    pattern = _SPELLED_LETTER.format(start="^" if at_boundary else "(?!)")
+
+    def name(m: re.Match) -> str:
+        return m.group(0).replace(m.group(1), LETTER_NAMES_FR[m.group(1).lower()])
+
+    return re.sub(pattern, name, text or "")
+
+
 def voicemail_window_open(answered_at: datetime | None, now: datetime, user_turns: int) -> bool:
     """La détection par la transcription ne joue qu'au tout début de l'appel (annonce d'accueil),
     jamais au milieu d'un échange avec une secrétaire."""
