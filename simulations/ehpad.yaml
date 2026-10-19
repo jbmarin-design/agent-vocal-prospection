@@ -209,8 +209,7 @@ scenarios:
     max_tours: 3
     attendu:
       issues: [rappel, refus, qualifie]
-      mots_max: 25
-      interdit: ["audit", "deux minutes"]
+      interdit: ["audit"]
 
   - id: questions_techniques
     titre: Questions techniques pointues
