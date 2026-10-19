@@ -349,4 +349,5 @@ def test_acquiescement_varie():
     first = logic.pick_acknowledgement("Elle n'est pas disponible aujourd'hui.", choice=lambda xs: xs[0])
     assert first == logic.ACKNOWLEDGEMENTS[0]
     second = logic.pick_acknowledgement("Elle sera là jeudi matin.", first, choice=lambda xs: xs[0])
+    assert "Je vois." not in logic.ACKNOWLEDGEMENTS and "Très bien." not in logic.ACKNOWLEDGEMENTS
     assert second and second != first

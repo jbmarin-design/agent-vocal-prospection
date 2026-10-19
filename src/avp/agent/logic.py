@@ -215,9 +215,9 @@ def ends_with_question(text: str) -> bool:
     return (text or "").rstrip().endswith("?")
 
 
-ACKNOWLEDGEMENTS: tuple[str, ...] = (
-    "D'accord.", "Très bien.", "Je vois.", "Entendu.", "Ah, d'accord.", "Oui, je comprends.", "Bien sûr.",
-)
+# Petits mots neutres, sans jugement ni accord sur le fond : « Très bien », « Je vois », « Bien sûr »
+# ponctuaient mal les phrases et sonnaient faux quand la réponse ne s'y prêtait pas (JB, 19/10).
+ACKNOWLEDGEMENTS: tuple[str, ...] = ("Ok.", "Ah.", "D'accord.", "Ok, d'accord.")
 _QUESTION_STARTS = (
     "qui ", "quoi", "quel", "quelle", "comment", "pourquoi", "combien", "où ", "quand ", "est-ce",
     "c'est quoi", "c'est qui", "vous êtes", "vous appelez", "c'est à quel", "c'est pour",
