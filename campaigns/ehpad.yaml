@@ -150,6 +150,10 @@ scoring:
 
 mots_cles_stt:
   - OpteoLink
+  - c'est moi
+  - moi-même
+  - lui-même
+  - elle-même
   - XiVO
   - EHPAD
   - IDEC
