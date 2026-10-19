@@ -294,6 +294,30 @@ def spell_letters_fr(text: str, *, at_boundary: bool = True) -> str:
     return re.sub(pattern, name, text or "")
 
 
+_COMPLAINT_PATTERNS = (
+    r"d[ée]marchage", r"d[ée]march[ée]e?s?\b", r"p[ée]nible", r"harc[eè]l\w*", r"arr[êe]tez (?:de|d['’])", r"on en re[çc]oit",
+    r"ras[- ]le[- ]bol", r"ne (?:m['’]|nous )appelez plus", r"retirez", r"bloctel", r"liste rouge",
+    r"ne plus (?:[êe]tre )?(?:appel|d[ée]march)",
+)
+COMPLAINT_HINT = (
+    "La personne se plaint du démarchage ou ne veut plus être appelée. Ne vous présentez pas, "
+    "ne proposez rien, aucun argument : excusez-vous du dérangement en une phrase courte, dites que vous "
+    "ne la rappellerez plus, et appelez enregistrer_opposition dans la même réponse."
+)
+
+
+def is_complaint(text: str) -> bool:
+    """Vrai si le prospect se plaint du démarchage ou demande à ne plus être appelé (règle 6).
+
+    Haiku enchaînait sur sa présentation malgré la consigne (simulations du 19/10) : on lui donne
+    alors une consigne ciblée pour cette réplique (agents.AgentAppel, simulation).
+    """
+    import re
+
+    t = (text or "").lower()
+    return any(re.search(p, t) for p in _COMPLAINT_PATTERNS)
+
+
 def voicemail_window_open(answered_at: datetime | None, now: datetime, user_turns: int) -> bool:
     """La détection par la transcription ne joue qu'au tout début de l'appel (annonce d'accueil),
     jamais au milieu d'un échange avec une secrétaire."""

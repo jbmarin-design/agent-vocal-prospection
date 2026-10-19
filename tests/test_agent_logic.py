@@ -387,3 +387,18 @@ def test_spell_letters_fr(text, expected):
 
 def test_spell_letters_fr_morceau_sans_delimiteur_avant():
     assert logic.spell_letters_fr("m, a", at_boundary=False) == "m, a"
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Encore du démarchage ! On en reçoit dix par semaine, c'est pénible.", True),
+        ("Retirez mon numéro, ne m'appelez plus.", True),
+        ("Je ne veux plus être démarchée.", True),
+        ("Oui, c'est moi la directrice.", False),
+        ("On a déjà un prestataire.", False),
+        ("C'est quoi votre démarche exactement ?", False),
+    ],
+)
+def test_is_complaint(text, expected):
+    assert logic.is_complaint(text) is expected

@@ -26,7 +26,7 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, Field
 
-from .agent.logic import infer_outcome, is_goodbye, realtime_llm_options
+from .agent.logic import COMPLAINT_HINT, infer_outcome, is_complaint, is_goodbye, realtime_llm_options
 from .config import Settings, get_settings
 from .models import (
     CallMetadata,
@@ -267,10 +267,13 @@ async def run_scenario(
                 fin = "le prospect a raccroché"
                 break
             # --- Sarah répond (avec un éventuel aller-retour si un outil renvoie une erreur)
+            system = [{"type": "text", "text": instructions, "cache_control": {"type": "ephemeral"}}]
+            if is_complaint(reply):  # même consigne ciblée qu'en appel réel (AgentAppel)
+                system.append({"type": "text", "text": COMPLAINT_HINT})
             for _attempt in range(2):
                 resp = await client.messages.create(
                     model=settings.llm_realtime_model, max_tokens=200,
-                    system=[{"type": "text", "text": instructions, "cache_control": {"type": "ephemeral"}}],
+                    system=system,
                     tools=AGENT_TOOLS, messages=agent_msgs, extra_body=extra_body or None,
                 )
                 text, uses = _texts(resp.content), _tool_uses(resp.content)

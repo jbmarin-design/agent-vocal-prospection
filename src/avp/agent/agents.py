@@ -28,11 +28,13 @@ from ..livekit_admin import participant_identity_for
 from ..models import CallOutcome
 from ..prompts import CLOSING_LINE, build_instructions
 from .logic import (
+    COMPLAINT_HINT,
     END_OUTCOMES,
     INTERJECTION_BUFFER_CHARS,
     SPELLING_DELIMITERS,
     CallUserData,
     coerce_outcome,
+    is_complaint,
     is_goodbye,
     looks_like_voicemail,
     pick_acknowledgement,
@@ -142,9 +144,14 @@ class _BaseProspectAgent(Agent):
         et prompts/base.md lui demande de ne pas commencer lui-même par un acquiescement.
         """
         ud = self._ud
+        text = getattr(new_message, "text_content", "") or ""
+        if is_complaint(text):
+            # Plainte contre le démarchage : consigne ciblée pour cette réplique, pas de petit mot.
+            turn_ctx.add_message(role="system", content=COMPLAINT_HINT)
+            return
         if not ud.settings.acquiescements or ud.hangup_requested or ud.closing:
             return
-        ack = pick_acknowledgement(getattr(new_message, "text_content", "") or "", ud.last_ack)
+        ack = pick_acknowledgement(text, ud.last_ack)
         if ack:
             ud.last_ack = ack
             ud.strip_interjection = True
