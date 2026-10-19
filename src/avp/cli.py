@@ -619,6 +619,50 @@ def cmd_prompt_show(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 
+def cmd_simulation(args: argparse.Namespace) -> int:
+    """Appels simulés en texte : Sarah face à un prospect joué par Claude (voir avp.simulation)."""
+    s = _settings()
+    campaign = _load_campaign(args.campaign, s)
+    from . import simulation as sim
+    from .orchestrator.slots import compute_rdv_slots
+    from .postcall import _make_anthropic_client
+
+    scenarios = sim.load_scenarios(campaign.id, s)
+    if args.scenario:
+        wanted = set(args.scenario)
+        scenarios = [x for x in scenarios if x.id in wanted]
+        unknown = wanted - {x.id for x in scenarios}
+        if unknown:
+            _out(f"Scénario(s) inconnu(s) : {', '.join(sorted(unknown))}")
+            return 2
+    if args.lister:
+        for x in scenarios:
+            _out(f"  {x.id:<24} {x.titre}")
+        return 0
+    slots = compute_rdv_slots(campaign, db.utcnow(), timezone=s.timezone)
+    _out(f"Simulation de {len(scenarios)} appel(s), campagne {campaign.id} "
+         f"(Sarah : {s.llm_realtime_model}, prospect et analyse : {s.llm_analysis_model})…\n")
+
+    async def _run() -> list:
+        client = _make_anthropic_client(s)
+        try:
+            return await sim.run_simulations(scenarios * max(1, args.repetitions), campaign, client=client,
+                                             settings=s, slots=slots, analyse=not args.sans_analyse,
+                                             parallel=args.parallele)
+        finally:
+            await client.close()
+
+    results = asyncio.run(_run())
+    for r in results:
+        _out(sim.format_result(r) + "\n")
+    ok = sum(r.ok for r in results)
+    _out(f"=== Bilan : {ok}/{len(results)} scénario(s) conformes ===")
+    for r in results:
+        _out(f"  {'✅' if r.ok else '❌'} {r.scenario.id}")
+    _out(f"Rapport : {sim.save_report(results, s)}")
+    return 0 if ok == len(results) else 1
+
+
 def cmd_postcall(args: argparse.Namespace) -> int:
     s = _settings()
     _ensure_db(s)
@@ -969,6 +1013,14 @@ def build_parser() -> argparse.ArgumentParser:
     x.add_argument("campaign")
     x.add_argument("--role", choices=["appel", "accueil", "decideur", "repondeur"], default="appel",
                    help="rôle de l'agent (défaut : %(default)s)")
+
+    x = _sub(sp, "simulation", "appels simulés en texte (prospect joué par Claude), avec contrôles", cmd_simulation)
+    x.add_argument("campaign", nargs="?", default="ehpad", help="campagne (défaut : %(default)s)")
+    x.add_argument("-s", "--scenario", action="append", help="scénario à jouer (répétable ; défaut : tous)")
+    x.add_argument("--repetitions", type=int, default=1, help="nombre de fois que chaque scénario est joué")
+    x.add_argument("--parallele", type=int, default=3, help="appels simulés en parallèle (défaut : %(default)s)")
+    x.add_argument("--sans-analyse", action="store_true", help="sans l'analyse post-appel (plus rapide)")
+    x.add_argument("--lister", action="store_true", help="liste les scénarios et quitte")
 
     p = _sub(sp, "postcall", "analyse post-appel et synchronisation Axonaut", cmd_postcall)
     qsp = p.add_subparsers(parser_class=_FrenchArgumentParser, dest="postcall_cmd", metavar="<action>", required=True)

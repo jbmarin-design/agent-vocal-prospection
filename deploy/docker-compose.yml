@@ -23,6 +23,7 @@ x-app-common: &app-common
     DATA_DIR: /app/data
     CAMPAIGNS_DIR: /app/campaigns
     PROMPTS_DIR: /app/prompts
+    SIMULATIONS_DIR: /app/simulations
     TZ: Europe/Paris
   # UID/GID propriétaires de ../data (écrits dans deploy/.env par install.sh ; 1000 par défaut).
   user: "${AVP_UID:-1000}:${AVP_GID:-1000}"
@@ -32,6 +33,7 @@ x-app-common: &app-common
     # (un redémarrage du conteneur suffit, voire rien selon la brique concernée).
     - ../campaigns:/app/campaigns:ro
     - ../prompts:/app/prompts:ro
+    - ../simulations:/app/simulations:ro
   restart: unless-stopped
   logging:
     driver: json-file

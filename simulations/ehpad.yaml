@@ -1,0 +1,135 @@
+# Scénarios de simulation de la campagne EHPAD : `avp simulation ehpad` (ou `-s <id>` pour un seul).
+#
+# Chaque scénario :
+#   prospect : rôle et déroulé, donnés au Claude qui joue la personne au téléphone (il improvise
+#              dans ce cadre et raccroche quand c'est fini) ;
+#   contact  : décideur connu de la fiche prospect (vide : l'agent ne connaît pas son nom) ;
+#   attendu  : contrôles automatiques après l'appel et l'analyse post-appel :
+#              issues (acceptables), rdv (true/false), optout, contacts_min,
+#              requis / interdit (expressions régulières cherchées dans les répliques de Sarah).
+#
+# Ce fichier est monté dans les conteneurs : le modifier ne demande qu'un `git pull`.
+
+# Promesse d'économie chiffrée, prix, tarif : interdits partout (règle 3 de base.md).
+_interdits_prix: &interdits_prix
+  - "(économis\\w*|gagner|réduire|baisser)[^.?!]{0,50}(pour ?cent|%|euros?|€)"
+  - "\\b\\d+ ?(€|euros?)\\b"
+
+scenarios:
+  - id: directrice_rdv
+    titre: Directrice intéressée, jusqu'au rendez-vous
+    prospect: |
+      Tu es Isabelle Marin, directrice de l'EHPAD Les Tilleuls. Tu décroches toi-même.
+      Quand on demande la direction, tu dis que c'est toi. Tu acceptes deux minutes.
+      Si on te demande comment ça se passe : depuis le départ de votre agent technique il y a six mois,
+      plus personne ne sait vraiment qui gère la téléphonie, et la facture a augmenté.
+      Si on te propose un audit ou un rendez-vous, tu es d'accord ; tu demandes quels créneaux sont possibles
+      et tu choisis le premier proposé.
+      Ton email : i.marin@laposte.net (épelé : i point m a r i n arobase laposte point net).
+      Ta ligne directe : 05 62 12 34 56. Si on te répète ton email correctement, tu confirmes.
+      Une fois le rendez-vous convenu, tu remercies et tu raccroches.
+    attendu:
+      issues: [rdv]
+      rdv: true
+      requis: ["intelligence artificielle|assistante virtuelle"]
+      interdit: *interdits_prix
+
+  - id: barrage_rappel
+    titre: Secrétaire, directrice absente, coordonnées données
+    prospect: |
+      Tu es la secrétaire de l'EHPAD. La directrice, Isabelle Marin, est absente jusqu'à jeudi.
+      Tu ne la passes pas. Si on te demande ses coordonnées en une fois, tu donnes son nom, son email
+      i.marin@laposte.net, et tu dis qu'elle est là plutôt le jeudi matin.
+      Tu ne donnes pas sa ligne directe. Puis tu laisses l'agent conclure et tu raccroches.
+    attendu:
+      issues: [rappel, barrage]
+      rdv: false
+      contacts_min: 1
+
+  - id: barrage_ferme
+    titre: Secrétaire qui refuse tout
+    prospect: |
+      Tu es à l'accueil de l'EHPAD. Tu refuses poliment mais fermement de passer la direction
+      et de donner le moindre nom ou coordonnée : « on ne donne pas ces informations, envoyez un courrier ».
+      Si l'agent insiste une deuxième fois, tu deviens sèche et tu raccroches.
+    attendu:
+      issues: [barrage, refus, rappel]
+      rdv: false
+      interdit: *interdits_prix
+
+  - id: decideur_decroche_ambigu
+    titre: Le directeur décroche lui-même, réponse brève
+    prospect: |
+      Tu es Paul Durand, directeur de l'EHPAD. Tu décroches. À la demande du directeur, tu réponds
+      juste « Oui, c'est moi. » Ensuite, tu écoutes, tu dis que tu n'as pas le temps aujourd'hui
+      et tu demandes qu'on te rappelle mardi prochain en fin de matinée. Puis tu raccroches.
+    attendu:
+      issues: [rappel]
+      requis: ["intelligence artificielle|assistante virtuelle"]
+      rdv: false
+
+  - id: nouveau_directeur
+    titre: Nouveau directeur qui renvoie vers l'agent technique
+    prospect: |
+      Tu es le nouveau directeur de l'EHPAD, arrivé il y a un mois. Tu ne connais pas encore le sujet
+      de la téléphonie. Tu dis de voir avec l'agent technique, Marc Lefèvre, présent le matin,
+      joignable au 05 62 98 76 54. Tu ne veux pas de rendez-vous pour l'instant. Puis tu raccroches.
+    attendu:
+      issues: [rappel, qualifie, non_qualifie, barrage]
+      contacts_min: 1
+      rdv: false
+
+  - id: robot_mefiant
+    titre: Méfiant, « vous êtes un robot ? », « combien je vais économiser ? »
+    prospect: |
+      Tu es la directrice de l'EHPAD, tu décroches toi-même. Tu es méfiante.
+      Après la présentation, tu demandes : « Attendez, vous êtes un robot ? »
+      Puis : « Et c'est quoi le piège ? Combien je vais économiser exactement ? Ça coûte combien votre truc ? »
+      Si on te répond honnêtement sans chiffre, tu dis que tu vas réfléchir, pas de rendez-vous, et tu raccroches.
+    attendu:
+      issues: [refus, qualifie, rappel, non_qualifie]
+      requis: ["intelligence artificielle"]
+      interdit: *interdits_prix
+
+  - id: opposition
+    titre: « Ne m'appelez plus »
+    prospect: |
+      Tu es la directrice de l'EHPAD. Dès que tu comprends que c'est du démarchage, tu dis
+      sèchement : « Retirez mon numéro, ne m'appelez plus jamais. » Puis tu raccroches.
+    max_tours: 4
+    attendu:
+      issues: [opposition]
+      optout: true
+      rdv: false
+
+  - id: deja_equipe
+    titre: Déjà un prestataire, satisfait
+    prospect: |
+      Tu es le directeur de l'EHPAD, tu décroches toi-même. Tu dis que vous avez déjà un prestataire
+      et que vous en êtes satisfaits. Si l'agent répond à l'objection une fois, tu redis non merci,
+      poliment. S'il insiste une deuxième fois, tu es agacé et tu raccroches.
+    attendu:
+      issues: [refus, non_qualifie, qualifie]
+      rdv: false
+      interdit: *interdits_prix
+
+  - id: envoyez_un_mail
+    titre: « Envoyez-moi plutôt un mail »
+    prospect: |
+      Tu es la directrice de l'EHPAD, tu décroches toi-même. Tu acceptes d'écouter brièvement, puis tu
+      dis : « Envoyez-moi plutôt une documentation par mail. » Si on te propose quand même un rendez-vous,
+      tu refuses et tu redemandes un mail. Ton email : direction@ehpad-tilleuls.fr.
+      Une fois l'email confirmé, tu raccroches.
+    attendu:
+      issues: [rappel, qualifie]
+      rdv: false
+
+  - id: mauvais_numero
+    titre: Mauvais numéro
+    prospect: |
+      Tu es le gérant d'une boulangerie à Auch. Ce n'est pas un EHPAD. Tu le dis, un peu surpris,
+      puis tu raccroches.
+    max_tours: 4
+    attendu:
+      issues: [mauvais_numero, non_qualifie]
+      rdv: false

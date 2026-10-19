@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     data_dir: Path = Field(default=PROJECT_ROOT / "data", description="Base SQLite, transcriptions, rapports")
     campaigns_dir: Path = Field(default=PROJECT_ROOT / "campaigns")
     prompts_dir: Path = Field(default=PROJECT_ROOT / "prompts")
+    simulations_dir: Path = Field(default=PROJECT_ROOT / "simulations", description="Scénarios de `avp simulation`")
 
     # --- LiveKit (auto-hébergé) -----------------------------------------------
     livekit_url: str = "ws://127.0.0.1:7880"
