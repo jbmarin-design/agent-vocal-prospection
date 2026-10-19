@@ -135,6 +135,7 @@ scenarios:
     attendu:
       issues: [rappel, qualifie]
       rdv: false
+      documentation: true
 
   - id: mauvais_numero
     titre: Mauvais numéro
@@ -258,4 +259,5 @@ scenarios:
       tu préfères un rappel la semaine prochaine. Puis tu raccroches.
     attendu:
       issues: [rappel, qualifie]
-    a_valider: La réponse sur l'origine du numéro est vraie (numéro public de l'établissement) et n'invente rien.
+      requis: ["annuaire|internet|public"]
+    a_valider: La réponse sur l'origine du numéro reste celle des consignes (annuaires, internet) et n'invente rien.

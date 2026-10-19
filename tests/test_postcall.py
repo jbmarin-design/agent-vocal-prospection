@@ -524,3 +524,14 @@ async def test_process_call_opposition_ajoute_a_la_liste(tmp_path: Path):
     await process_call(call_id, llm_client=FakeLLM({**GOOD, "opposition": True}), axonaut=FakeAxonaut(),
                        settings=st)  # type: ignore[arg-type]
     assert any(r["phone"] == "+33562000000" for r in db.list_optout(st.db_path))
+
+
+async def test_sync_documentation_demandee_cree_une_tache(tmp_path: Path):
+    ax = FakeAxonaut()
+    rec = record(CallOutcome.RAPPEL)
+    res = await sync_axonaut(rec, analysis(documentation_demandee=True, documentation_email="direction@ehpad.fr"),
+                             campaign(), axonaut=ax, settings=settings_for(tmp_path))
+    titles = [t["title"] for t in ax.of("create_task")]
+    assert "Envoyer la documentation — EHPAD Les Tilleuls" in titles and res["erreurs"] == []
+    doc = next(t for t in ax.of("create_task") if t["title"].startswith("Envoyer"))
+    assert "direction@ehpad.fr" in doc["description"]

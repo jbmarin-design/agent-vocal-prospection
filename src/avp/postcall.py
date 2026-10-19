@@ -747,6 +747,26 @@ async def sync_axonaut(
         except AxonautError as exc:
             fail("tâche de relance", exc)
 
+    # 3 bis) Documentation demandée : tâche pour Jean-Baptiste (en plus d'un éventuel rappel)
+    if analysis and analysis.documentation_demandee:
+        email = analysis.documentation_email or st.contact_email
+        try:
+            task = await axonaut.create_task(
+                title=f"Envoyer la documentation — {p.name}"[:255],
+                company_id=company_id,
+                description=(
+                    f"Documentation demandée lors de l'appel IA du {_fmt_dt(call_date, tz)}"
+                    f"{f' par {st.contact_name}' if st.contact_name else ''}.\n"
+                    f"Envoyer à : {email or 'email non relevé, voir la transcription'}\n"
+                    f"Résumé : {analysis.resume}"
+                ),
+                due=today + timedelta(days=1),
+                priority="normale",
+            )
+            result["task_ids"].append(_id(task))
+        except AxonautError as exc:
+            fail("tâche de documentation", exc)
+
     # 4) Échéance lointaine (fin de contrat, décision dans 1 ou 2 ans) : tâche de relance anticipée
     if analysis and analysis.date_decision and analysis.date_decision > today + timedelta(days=30):
         due = max(today + timedelta(days=7),

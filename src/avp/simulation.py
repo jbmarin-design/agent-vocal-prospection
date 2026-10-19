@@ -108,6 +108,7 @@ class Attendu(BaseModel):
     requis: list[str] = Field(default_factory=list, description="Regex : chacune doit apparaître chez l'agent")
     interdit: list[str] = Field(default_factory=list, description="Regex : aucune ne doit apparaître chez l'agent")
     rdv_email: str = Field(default="", description="Email attendu dans le RDV relevé (contrôle de l'épellation)")
+    documentation: bool | None = Field(default=None, description="Une demande de documentation doit être relevée")
     mots_max: int = Field(default=45, description="Longueur maximale d'une réplique de Sarah (consigne : 30 mots)")
 
 
@@ -135,6 +136,7 @@ class SimulationResult(BaseModel):
     resume: str = ""
     checks: list[Check] = Field(default_factory=list)
     erreur: str = ""
+    documentation: str = Field(default="", description="Email relevé pour une documentation demandée")
     longues: list[str] = Field(default_factory=list, description="Répliques de l'agent de plus de 30 mots")
 
     @property
@@ -188,6 +190,9 @@ def evaluate(result: SimulationResult) -> list[Check]:
         got_email = st.rdv.email if st.rdv else ""
         checks.append(Check(nom="email du rdv", ok=got_email.lower() == a.rdv_email.lower(),
                             detail=f"{got_email or '—'} (attendu : {a.rdv_email})"))
+    if a.documentation is not None:
+        checks.append(Check(nom="documentation", ok=bool(result.documentation) == a.documentation,
+                            detail=result.documentation or "non demandée"))
     if a.optout is not None:
         checks.append(Check(nom="opposition", ok=st.optout == a.optout, detail=str(st.optout)))
     if a.contacts_min:
@@ -326,6 +331,8 @@ async def run_scenario(
             analysis = await analyze_call(record, campaign, client=client, settings=settings)
             apply_analysis(record.state, analysis, campaign=campaign, slots=slots, timezone=settings.timezone)
             result.score, result.resume = f"{analysis.score} {analysis.score_num}", analysis.resume
+            if analysis.documentation_demandee:
+                result.documentation = analysis.documentation_email or "(sans email)"
         except Exception as exc:  # noqa: BLE001
             result.erreur = f"analyse : {exc}"
     result.longues = [t.text for t in transcript if t.role == "agent" and len(t.text.split()) > 30]

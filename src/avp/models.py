@@ -357,6 +357,10 @@ class CallAnalysis(BaseModel):
     )
     rappel: Callback | None = Field(default=None, description="Rappel convenu : quand, qui demander")
     rdv: RdvAnalyse | None = Field(default=None, description="Rendez-vous accepté par le prospect, sinon null")
+    documentation_demandee: bool = Field(
+        default=False, description="Vrai si la personne a demandé qu'on lui envoie une documentation"
+    )
+    documentation_email: str = Field(default="", description="Email où envoyer la documentation")
     opposition: bool = Field(
         default=False, description="Vrai si la personne a demandé à ne plus être appelée (même en raccrochant aussitôt)"
     )
