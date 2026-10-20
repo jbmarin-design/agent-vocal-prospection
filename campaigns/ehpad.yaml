@@ -207,20 +207,22 @@ rdv:
 # Pipeline Axonaut. À FAIRE PAR JB : créer le pipeline « EHPAD 2026 » et ses étapes dans
 # Axonaut (CRM > Opportunités > Paramètres des pipelines), ou ajuster les noms ci-dessous
 # pour qu'ils correspondent EXACTEMENT (casse et accents) à vos étapes existantes.
+# Étapes du pipeline « EHPAD 2026 » telles que créées par JB dans Axonaut (20/10/2026) :
+# Prospect ciblé → Prospect contacté → Contact établi → r1 → propostion → refus.
 axonaut:
   pipe: "EHPAD 2026"
-  etape_initiale: "À contacter"
+  etape_initiale: "Prospect ciblé"
   etapes:
-    rdv: "RDV planifié"
-    transfert: "RDV planifié"
-    rappel: "Rappel prévu"
-    qualifie: "Qualifié"
-    refus: "Perdu"
-    non_qualifie: "Perdu"
-    barrage: "À contacter"
-    chaud: "Qualifié"
-    tiede: "Rappel prévu"
-    froid: "À contacter"
+    rdv: "r1"
+    transfert: "r1"
+    rappel: "Prospect contacté"
+    qualifie: "Contact établi"
+    refus: "refus"
+    non_qualifie: "refus"
+    barrage: "Prospect contacté"
+    chaud: "Contact établi"
+    tiede: "Contact établi"
+    froid: "Prospect contacté"
 
 instructions_specifiques: >-
   Les EHPAD sont des lieux de soins : si votre interlocuteur est appelé pour une urgence,
