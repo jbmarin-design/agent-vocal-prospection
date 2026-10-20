@@ -191,7 +191,7 @@ def is_goodbye(text: str) -> bool:
 
 
 _CLOSING_PATTERNS = (
-    r"\bmerci\b",
+    r"\bmerci\b", r"\bremerci\w*",
     r"au revoir",
     r"bonne (?:fin de )?(?:journ[ée]e|soir[ée]e|semaine)",
     r"\bc'est (?:tout|bon|not[ée]|parfait)\b",
@@ -209,6 +209,22 @@ def is_closing_remark(text: str) -> bool:
     if not t or len(t.split()) > CLOSING_MAX_WORDS:
         return False
     return any(re.search(p, t) for p in _CLOSING_PATTERNS)
+
+
+_WRAP_UP_PATTERNS = (
+    r"recevrez (?:l['’])?invitation", r"invitation (?:va |vous )?(?:arriver|parvenir|partir)",
+    r"passera (?:vous voir )?(?:lundi|mardi|mercredi|jeudi|vendredi)", r"vous rappellera",
+    r"je (?:lui )?transmets", r"[àa] (?:lundi|mardi|mercredi|jeudi|vendredi)\b",
+)
+
+
+def is_wrap_up_statement(text: str) -> bool:
+    """Vrai si la réplique de Sarah confirme ce qui a été convenu, sans rien demander : c'est la fin
+    de l'appel même si elle n'a pas dit au revoir ni appelé terminer_appel (test du 20/10)."""
+    import re
+
+    t = (text or "").lower()
+    return not ends_with_question(t) and any(re.search(p, t) for p in _WRAP_UP_PATTERNS)
 
 
 def ends_with_question(text: str) -> bool:

@@ -535,3 +535,10 @@ async def test_sync_documentation_demandee_cree_une_tache(tmp_path: Path):
     assert "Envoyer la documentation — EHPAD Les Tilleuls" in titles and res["erreurs"] == []
     doc = next(t for t in ax.of("create_task") if t["title"].startswith("Envoyer"))
     assert "direction@ehpad.fr" in doc["description"]
+
+
+def test_apply_analysis_rdv_prime_sur_refus_deduit():
+    st = CallState(outcome=CallOutcome.REFUS, decision_maker_reached=True)
+    apply_analysis(st, analysis(rdv={"start": "2026-10-20T10:00:00+02:00", "email": "a.b@ehpad.fr"}),
+                   campaign=campaign(), slots=[SLOT])
+    assert st.outcome is CallOutcome.RDV

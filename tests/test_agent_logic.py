@@ -468,3 +468,13 @@ def test_lettre_e_et_domaine_fr():
     assert logic.pronounce_fr(logic.spell_letters_fr("Je répète : h, a, m, e, l, i, n, arobase, orange, point, fr.")) == (
         "Je répète : hache, a, èm, eux, èl, i, èn, arobase, orange, point, èf èr."
     )
+
+
+def test_fin_de_conversation():
+    assert logic.is_closing_remark("Oui, c'est bien ça, je vous remercie.")
+    assert logic.is_wrap_up_statement(
+        "Merci à vous, Monsieur Amelin. Jean-Baptiste passera jeudi vingt-deux octobre à dix heures, "
+        "et vous recevrez l'invitation par email.")
+    assert logic.is_wrap_up_statement("Très bien, Jean-Baptiste vous rappellera jeudi matin.")
+    assert not logic.is_wrap_up_statement("Jean-Baptiste passera jeudi à dix heures : ça vous convient ?")
+    assert not logic.is_wrap_up_statement("Comment ça se passe chez vous aujourd'hui ?")

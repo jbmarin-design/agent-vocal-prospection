@@ -315,7 +315,9 @@ def apply_analysis(
         )
         if email and not state.contact_email:
             state.contact_email = email
-        if state.outcome in (None, CallOutcome.BARRAGE, CallOutcome.RAPPEL, CallOutcome.QUALIFIE):
+        # Un RDV accepté prime sur l'issue déduite en fin d'appel (« refus » quand le décideur a été
+        # joint sans terminer_appel : test du 20/10), sauf opposition ou transfert.
+        if state.outcome not in (CallOutcome.OPPOSITION, CallOutcome.TRANSFERT):
             state.outcome = CallOutcome.RDV
         added.append("rdv" + (" à confirmer" if state.rdv.a_confirmer else ""))
     for c in analysis.contacts:

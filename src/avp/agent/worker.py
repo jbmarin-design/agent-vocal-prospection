@@ -52,6 +52,7 @@ from .logic import (
     is_closing_remark,
     is_goodbye,
     is_silent_pickup,
+    is_wrap_up_statement,
     looks_like_voicemail,
     outcome_from_amd,
     should_leave_voicemail,
@@ -243,6 +244,9 @@ async def entrypoint(ctx: JobContext) -> None:
         if role == "assistant" and not (ud.hangup_requested or ud.closing):
             if is_goodbye(text):
                 tasks.append(asyncio.create_task(_end_guard(item, "au revoir sans terminer_appel")))
+            elif is_wrap_up_statement(text):
+                # Sarah confirme le RDV ou le rappel sans dire au revoir : c'est la fin.
+                tasks.append(asyncio.create_task(_end_guard(item, "confirmation finale sans terminer_appel")))
             elif closing_remark and not ends_with_question(text):
                 # Le prospect a remercié / dit au revoir et l'agent n'attend plus de réponse.
                 tasks.append(asyncio.create_task(_end_guard(item, "fin de conversation (remerciements)")))
