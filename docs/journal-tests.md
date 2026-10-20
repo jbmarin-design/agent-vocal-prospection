@@ -18,7 +18,8 @@ Une ligne par test. Indiquer la version de prompt (`avp prompt show <campagne>`)
 | 20/10/2026 | 5.4 | Appel réel non décroché (6c5094d9) | — | prospect 1 | issue non_decroche, 1 tentative consommée, rappel le 21/10 à 11 h 24 (+24 h) | oui |
 | 20/10/2026 | 5.4 | Appel réel vers la messagerie (0e9066d2, appel rejeté → renvoi messagerie) | — | prospect 1 | AMD machine-vm, issue repondeur, raccrochage à 14 s sans message, rappel à +48 h | oui |
 | | 5.4 | Occupé : non reproductible sur portable (rejet = messagerie) ; couvert par les tests automatiques | | | à faire depuis un fixe si besoin | |
-| | 5.4 | Issues réelles : rappel daté, opposition | | appels sur le portable de JB | à faire | |
+| 20/10/2026 | 5.4 | Appel réel opposition (1c487f54) | — | « ne me rappelez plus » | excuses, raccrochage en 25 s, issue opposition, numéro en liste d'opposition, prospect exclu (numéro retiré ensuite pour la suite des tests) ; « ne me rappelez plus » ajouté à la détection sans Claude (4f82742) | oui |
+| | 5.4 | Rappel daté (« rappelez-moi demain à 11 h ») | | | à faire | |
 | | 5.5 | Concurrence réelle (2 appels simultanés max) | | au moins 2 numéros | à faire | |
 | 20/10/2026 | 5.6 | Redémarrage du démon pendant un appel (88b5e3fc, barrage joué par JB) | — | `docker compose restart orchestrator` à 15:29:05 | arrêt et redémarrage propres en 2 s, appel poursuivi et terminé normalement, aucun double appel | oui |
 | | 5.6 | Worker arrêté (appels orphelins) | | | à faire | |
