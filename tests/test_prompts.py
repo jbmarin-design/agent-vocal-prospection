@@ -119,3 +119,9 @@ def test_transfert_indique_dans_le_contexte(ehpad, prospect):
     )
     assert "Transfert vers un humain : indisponible" in sans
     assert "Transfert vers Jean-Baptiste Marin : disponible" in avec
+
+
+def test_fiche_email_deja_connu(ehpad, prospect):
+    p = prospect.model_copy(update={"notes": "Contacts recueillis le 20/10/2026 : Isabelle Marin (directrice) i.marin@laposte.net"})
+    text = prompts.prospect_section(p)
+    assert "Email déjà connu : i.marin@laposte.net" in text and "Ne le redemandez pas" in text

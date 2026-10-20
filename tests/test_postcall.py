@@ -555,3 +555,11 @@ async def test_process_call_met_a_jour_la_fiche_prospect(tmp_path: Path):
     row = db.get_prospect_row(pid, st.db_path)
     assert row and row["contact_name"] == "Isabelle Marin" and row["contact_role"] == "directrice"
     assert row["status"] == "a_rappeler" and row["next_attempt_at"].startswith("2026-10-22")
+
+
+async def test_evenement_axonaut_html_avec_transcription(tmp_path: Path):
+    ax = FakeAxonaut()
+    await sync_axonaut(record(CallOutcome.RAPPEL), analysis(), campaign(), axonaut=ax, settings=settings_for(tmp_path))
+    content = ax.of("create_event")[0]["content"]
+    assert "<br>" in content and "\n" not in content
+    assert "Transcription :<br>" in content and "Sarah : Bonjour" in content and "Prospect : Oui, bonjour." in content

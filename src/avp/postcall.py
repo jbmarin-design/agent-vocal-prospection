@@ -551,7 +551,33 @@ def _event_content(
         f"Campagne : {campaign.nom} — tentative {record.metadata.attempt} — appel {record.metadata.call_id}",
         f"Transcription locale : {transcript_path}",
     ]
+    if record.transcript:
+        lines += ["", "Transcription :", crm_transcript(record, tz)]
     return "\n".join(lines).strip()
+
+
+CRM_TRANSCRIPT_MAX_CHARS = 12000
+
+
+def crm_transcript(record: CallRecordFile, tz: ZoneInfo) -> str:
+    """Transcription pour le CRM : une ligne par réplique, « Sarah » / « Prospect »."""
+    lines = []
+    for turn in record.transcript:
+        text = " ".join(turn.text.split())
+        if not text or turn.role not in ("agent", "prospect"):
+            continue
+        loc = _local(turn.ts, tz)
+        stamp = f"[{loc.strftime('%H:%M')}] " if loc else ""
+        lines.append(f"{stamp}{'Sarah' if turn.role == 'agent' else 'Prospect'} : {text}")
+    out = "\n".join(lines)
+    return out if len(out) <= CRM_TRANSCRIPT_MAX_CHARS else out[:CRM_TRANSCRIPT_MAX_CHARS] + "\n[…] (suite dans la transcription locale)"
+
+
+def to_axonaut_html(text: str) -> str:
+    """Axonaut affiche le contenu des événements en HTML : retours à la ligne en <br>, texte échappé."""
+    import html
+
+    return html.escape(text, quote=False).replace("\n", "<br>")
 
 
 def _opportunity_comment(outcome: CallOutcome, analysis: CallAnalysis | None, when: datetime, tz: ZoneInfo) -> str:
@@ -666,7 +692,7 @@ async def sync_axonaut(
         ev = await axonaut.create_event(
             company_id=company_id,
             title=_event_title(outcome, analysis),
-            content=_event_content(record, analysis, campaign, tz, transcript_path),
+            content=to_axonaut_html(_event_content(record, analysis, campaign, tz, transcript_path)),
             date=call_date,
             nature=3,
             duration_min=duration_min,

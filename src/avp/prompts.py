@@ -289,6 +289,11 @@ def prospect_section(prospect: Prospect) -> str:
         lines.append(f"Fonction du contact recherché : {prospect.contact_role}")
     else:
         lines.append("Contact connu : aucun, demandez le nom de la bonne personne.")
+    known_emails = sorted(set(re.findall(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", prospect.notes)))
+    if known_emails:
+        # Recueillis lors d'un appel précédent : Sarah les redemandait (test du 20/10).
+        lines.append(f"Email déjà connu : {', '.join(known_emails)}. Ne le redemandez pas : faites-le seulement "
+                     "confirmer au moment du rendez-vous.")
     if prospect.notes.strip():
         lines += ["Historique et notes :", prospect.notes.strip()]
     extras = {k: v for k, v in prospect.extra.items() if v not in (None, "", [], {})}
