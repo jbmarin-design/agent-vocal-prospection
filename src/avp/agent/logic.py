@@ -350,7 +350,7 @@ COMPLAINT_HINT = (
 
 
 _OPTOUT_PATTERNS = (
-    r"ne (?:m['’]|nous )(?:appelez|rappelez|contactez) plus", r"(?:retirez|supprimez|effacez|rayez) (?:mon|notre|nos|le) "
+    r"ne (?:m['’]|me |nous )(?:appel|rappel|contact)\w* plus", r"(?:retirez|supprimez|effacez|rayez) (?:mon|notre|nos|le) "
     r"(?:num[ée]ro|coordonn[ée]es|fiche|ligne)", r"bloctel", r"liste (?:rouge|d['’]opposition)",
     r"(?:ne plus|plus jamais) (?:[êe]tre )?(?:appel[ée]e?s?|d[ée]march[ée]e?s?|contact[ée]e?s?)",
     r"(?:veux|souhaite) plus (?:[êe]tre )?(?:appel[ée]e?s?|d[ée]march[ée]e?s?|contact[ée]e?s?)",

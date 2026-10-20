@@ -411,6 +411,7 @@ def test_is_complaint(text, expected):
         ("Je suis inscrite sur Bloctel.", True),
         ("Je ne veux plus être démarchée.", True),
         ("Arrêtez de nous appeler !", True),
+        ("Non, ça ne m'intéresse pas, ne me rappelez plus.", True),
         ("C'est du démarchage ?", False),
         ("Encore du démarchage, c'est pénible.", False),
         ("Rappelez-moi plutôt jeudi.", False),
