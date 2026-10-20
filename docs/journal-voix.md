@@ -12,6 +12,9 @@ Outil : des échantillons de la voix de Sarah peuvent être générés sur la VM
 | Date | Appel | Constat | Souhait |
 |---|---|---|---|
 | 20/10 | 38fbde2a | « Hamelin » épelé « h a m… » par le prospect, transcrit en bribes ; Sarah a répété « a, m, e, l, i, n » sans le H et le prospect a validé | Garde-fou : si le nom noté et l'email ne concordent pas, RDV « à confirmer » |
+| 20/10 | 4c200870 | Sarah dit encore « Pour l'invitation » (exemple de decideur.md 6 bis) alors que c'est un email de confirmation | Remplacer par « Pour la confirmation » |
+| 20/10 | 4c200870 | Le nom (Isabelle Marin) était connu, Sarah a quand même demandé « prénom et nom, email » | Ne demander que l'email quand le nom est dans la fiche |
+| 20/10 | 4c200870 | Domaine « lesbranches » répété « les, branchés » | À écouter : acceptable ou épeler les noms de domaine peu courants |
 | 20/10 | — | Voix jugée encore un peu robotique dans l'ensemble | Comparer d'autres voix Cartesia / ElevenLabs et la vitesse (`TTS_SPEED`) |
 
 ## Déjà corrigé
