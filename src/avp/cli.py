@@ -318,6 +318,55 @@ def cmd_call_test(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_call_prospect(args: argparse.Namespace) -> int:
+    """Appel réel d'un prospect de la base (CRM réel : le post-appel écrit dans Axonaut).
+
+    Pour valider un prospect importé sans activer la campagne (le démon appellerait alors tous les
+    prospects dus). Ignore les plages horaires ; respecte la liste d'opposition.
+    """
+    s = _settings()
+    _ensure_db(s)
+    row = db.get_prospect_row(args.prospect_id, s.db_path)
+    if row is None:
+        raise CliError(f"prospect inconnu : {args.prospect_id} (voir `avp campaign stats <campagne>`)")
+    prospect = db.get_prospect(args.prospect_id, s.db_path)
+    assert prospect is not None
+    campaign = _load_campaign(prospect.campaign_id, s)
+    if row.get("status") == "en_cours":
+        raise CliError("ce prospect a déjà un appel en cours")
+    from .orchestrator.scheduler import CallBlocked, DispatchError, closed_days, launch_call
+
+    with db.connect(s.db_path) as c:
+        c.execute("UPDATE prospects SET status='en_cours', updated_at=? WHERE id=?",
+                  (db._iso(db.utcnow()), prospect.id))
+
+    async def _go() -> str:
+        busy: Any = ()
+        busy_provider, _ = _google_hooks(s)
+        if busy_provider is not None:
+            try:
+                busy = await busy_provider(db.utcnow())
+            except Exception as e:  # noqa: BLE001
+                _out(f"Agenda Google indisponible ({e}) : créneaux calculés sans lui.")
+        return await launch_call(prospect, campaign, attempt=int(row.get("attempts") or 0) + 1, test_mode=False,
+                                 settings=s, extra_closed=closed_days(s), busy=busy)
+
+    try:
+        call_id = asyncio.run(_go())
+    except CallBlocked as e:
+        raise CliError(str(e)) from e
+    except DispatchError as e:
+        raise CliError(f"{e} — vérifier LiveKit (`avp check`) et le worker (logs agent-worker)") from e
+    _out(f"Appel lancé : {call_id} vers {prospect.name} ({to_national_fr(prospect.phone)}), campagne {campaign.id}")
+    _out("Mode : CRM RÉEL (Axonaut sera mis à jour après l'appel)")
+    if args.wait and not s.dry_run:
+        row2 = _wait_call(call_id, s.max_call_duration_s + s.ring_timeout_s + 60, s)
+        if row2:
+            _out(f"Fin : état {row2['status']}, issue {row2.get('outcome') or '—'}")
+    _out(f"Détail : avp calls show {call_id}")
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # campaign
 # ---------------------------------------------------------------------------
@@ -433,7 +482,7 @@ def _campaign_stats(args: argparse.Namespace, s: Settings) -> int:
             "SELECT score, COUNT(*) n FROM calls WHERE campaign_id=? AND score IS NOT NULL GROUP BY score", (cid,)
         ).fetchall()
         nxt = c.execute(
-            "SELECT name, phone, next_attempt_at, attempts FROM prospects WHERE campaign_id=? "
+            "SELECT id, name, phone, next_attempt_at, attempts FROM prospects WHERE campaign_id=? "
             "AND status IN ('nouveau','a_rappeler') ORDER BY next_attempt_at LIMIT 5", (cid,)
         ).fetchall()
     _out("\nIssues des appels (hors tests) :")
@@ -442,8 +491,9 @@ def _campaign_stats(args: argparse.Namespace, s: Settings) -> int:
         _out("\nScores : " + ", ".join(f"{r['score']}={r['n']}" for r in scores))
     if nxt:
         _out("\nProchains appels prévus :")
-        _out(_table(["Établissement", "Téléphone", "Prévu le", "Tentatives"],
-                    [[r["name"], to_national_fr(r["phone"]), _local(r["next_attempt_at"], tz), r["attempts"]] for r in nxt]))
+        _out(_table(["ID", "Établissement", "Téléphone", "Prévu le", "Tentatives"],
+                    [[r["id"], r["name"], to_national_fr(r["phone"]), _local(r["next_attempt_at"], tz), r["attempts"]]
+                     for r in nxt]))
     return 0
 
 
@@ -986,6 +1036,9 @@ def build_parser() -> argparse.ArgumentParser:
     t.add_argument("--city", default="Auch", help="ville simulée (défaut : %(default)s)")
     t.add_argument("--contact", default="", help="nom du décideur simulé")
     t.add_argument("--live-crm", action="store_true", help="mode réel : le post-appel écrira dans Axonaut")
+    t.add_argument("--wait", action="store_true", help="attend la fin de l'appel et affiche l'issue")
+    t = _sub(csp, "prospect", "appel réel d'un prospect de la base (Axonaut mis à jour)", cmd_call_prospect)
+    t.add_argument("prospect_id", type=int, help="identifiant du prospect (base locale)")
     t.add_argument("--wait", action="store_true", help="attend la fin de l'appel et affiche l'issue")
 
     p = _sub(sp, "campaign", "campagnes : liste, détail, import, statistiques, lancement", cmd_campaign)

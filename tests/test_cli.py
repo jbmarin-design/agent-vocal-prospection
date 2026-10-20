@@ -288,3 +288,9 @@ def test_purge_transcripts_real(db_ready: Settings) -> None:
     assert row is not None and row["transcript_path"] == "transcripts/new.json"
     with pytest.raises(ValueError):
         purge_transcripts(0, settings=db_ready)
+
+
+def test_parser_call_prospect():
+    p = cli.build_parser()
+    a = p.parse_args(["call", "prospect", "12", "--wait"])
+    assert a.prospect_id == 12 and a.wait and a.func is cli.cmd_call_prospect
