@@ -583,3 +583,12 @@ async def test_sync_rdv_envoie_la_confirmation_au_client(tmp_path: Path):
     assert mail["employee_email"] == "i.marin@laposte.net" and "jeudi 22 octobre à 10 h 30" in mail["content"]
     assert ax.of("send_event") and ax.of("create_employee")[0]["email"] == "i.marin@laposte.net"
     assert ax.of("create_task") == []
+
+
+async def test_process_call_rappel_date_reprogramme_meme_si_issue_inchangee(tmp_path: Path):
+    rec = record(CallOutcome.RAPPEL)  # issue déjà « rappel » (terminer_appel), sans date
+    st, call_id, pid = setup_db(tmp_path, rec)
+    data = {**GOOD, "rappel": {"ask_for": "Mme Marin", "when": "2026-10-21T11:00:00+02:00"}}
+    await process_call(call_id, llm_client=FakeLLM(data), axonaut=FakeAxonaut(), settings=st)  # type: ignore[arg-type]
+    row = db.get_prospect_row(pid, st.db_path)
+    assert row and row["status"] == "a_rappeler" and row["next_attempt_at"].startswith("2026-10-21T09:00")
