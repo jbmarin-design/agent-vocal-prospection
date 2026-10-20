@@ -15,6 +15,7 @@ Une ligne par test. Indiquer la version de prompt (`avp prompt show <campagne>`)
 | 20/10/2026 | 5.4 | Opposition ajoutée avant lancement | — | DRY_RUN | numéro jamais appelé, prospect exclu | oui |
 | 20/10/2026 | 5.6 | LiveKit arrêté | — | DRY_RUN=false, faux numéro | dispatch en échec, appel « erreur », prospect à rappeler +15 min sans tentative, démon et worker se rétablissent seuls | oui |
 | 20/10/2026 | 5.4 | Appel réel RDV complet (4c200870) | — | prospect 1, email de test | RDV jeudi 22 à 11 h 30, RDV Axonaut 130716110, email de confirmation envoyé à jbmarin@lesbranches.tech, raccrochage auto après la confirmation, prospect terminé | oui |
-| | 5.4 | Issues réelles : non décroché, occupé, messagerie, rappel daté, opposition | | appels sur le portable de JB | à faire | |
+| 20/10/2026 | 5.4 | Appel réel non décroché (6c5094d9) | — | prospect 1 | issue non_decroche, 1 tentative consommée, rappel le 21/10 à 11 h 24 (+24 h) | oui |
+| | 5.4 | Issues réelles : occupé, messagerie, rappel daté, opposition | | appels sur le portable de JB | à faire | |
 | | 5.5 | Concurrence réelle (2 appels simultanés max) | | au moins 2 numéros | à faire | |
 | | 5.6 | Worker arrêté (appels orphelins), redémarrage du démon pendant un appel | | | à faire | |
