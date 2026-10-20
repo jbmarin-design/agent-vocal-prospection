@@ -592,3 +592,25 @@ async def test_process_call_rappel_date_reprogramme_meme_si_issue_inchangee(tmp_
     await process_call(call_id, llm_client=FakeLLM(data), axonaut=FakeAxonaut(), settings=st)  # type: ignore[arg-type]
     row = db.get_prospect_row(pid, st.db_path)
     assert row and row["status"] == "a_rappeler" and row["next_attempt_at"].startswith("2026-10-21T09:00")
+
+
+@pytest.mark.parametrize(
+    ("name", "email", "flagged"),
+    [
+        ("Jean-Luc Hamelin", "jl.amelin@ehpad.fr", True),
+        ("Jean-Luc Hamelin", "jl.hamelin@ehpad.fr", False),
+        ("Isabelle Marin", "direction@ehpad-tilleuls.fr", False),
+        ("Isabelle Marin", "i.marin@laposte.net", False),
+        ("Karim Benali", "k.benaly@ehpad.fr", True),
+    ],
+)
+def test_name_email_mismatch(name, email, flagged):
+    from avp.postcall import name_email_mismatch
+    assert bool(name_email_mismatch(name, email)) is flagged
+
+
+def test_rdv_a_confirmer_si_nom_et_email_ne_concordent_pas():
+    st = CallState(outcome=CallOutcome.RDV)
+    apply_analysis(st, analysis(rdv={"start": "2026-10-20T10:00:00+02:00", "email": "jl.amelin@ehpad.fr",
+                                     "avec": "Jean-Luc Hamelin"}), campaign=campaign(), slots=[SLOT])
+    assert st.rdv is not None and st.rdv.a_confirmer and "ne concordent pas" in st.rdv.notes

@@ -272,6 +272,31 @@ def _postprocess(analysis: CallAnalysis, record: CallRecordFile, tz: ZoneInfo) -
     return analysis.model_copy(update=updates) if updates else analysis
 
 
+def name_email_mismatch(name: str, email: str) -> str:
+    """Signale un email qui ressemble au nom de la personne sans lui correspondre (« Hamelin » et
+    « jl.amelin@… », test du 20/10) : probable erreur de dictée. Chaîne vide si rien à signaler.
+
+    Un email sans rapport avec le nom (direction@, accueil@) n'est pas signalé.
+    """
+    import difflib
+    import re
+    import unicodedata
+
+    def norm(s: str) -> str:
+        s = unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode().lower()
+        return re.sub(r"[^a-z]", "", s)
+
+    local = (email or "").split("@")[0].lower()
+    tokens = [norm(t) for t in re.split(r"[._\-+]", local) if len(norm(t)) >= 3]
+    for part in (norm(w) for w in (name or "").split()):
+        if len(part) < 4 or any(part in t for t in tokens):
+            continue
+        for t in tokens:
+            if difflib.SequenceMatcher(None, part, t).ratio() >= 0.75:
+                return f"le nom « {part} » et l'email « {local} » ne concordent pas"
+    return ""
+
+
 def apply_analysis(
     state: CallState,
     analysis: CallAnalysis,
@@ -303,6 +328,8 @@ def apply_analysis(
         if not looks_like_email(email):
             notes.append(f"email à vérifier ({email or 'non donné'})")
             email = ""
+        elif mismatch := name_email_mismatch(analysis.rdv.avec or state.contact_name or analysis.interlocuteur, email):
+            notes.append(f"email à vérifier : {mismatch}")
         policy = campaign.rdv if campaign else None
         state.rdv = Rdv(
             start=matched or start,
