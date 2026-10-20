@@ -31,12 +31,14 @@ from .logic import (
     COMPLAINT_HINT,
     END_OUTCOMES,
     INTERJECTION_BUFFER_CHARS,
+    NEW_PERSON_HINT,
     OPTOUT_LINE,
     SPELLING_DELIMITERS,
     CallUserData,
     coerce_outcome,
     is_complaint,
     is_goodbye,
+    is_hold_line,
     is_optout_request,
     is_self_identification,
     looks_like_voicemail,
@@ -157,11 +159,16 @@ class _BaseProspectAgent(Agent):
             handle = self.session.say(OPTOUT_LINE, allow_interruptions=False)
             _spawn(self._finish_after(handle, "opposition"))
             raise StopResponse()
+        after_hold = is_hold_line(_last_agent_text(self.session))
+        if after_hold:
+            # Après un transfert : nouvelle personne, présentation IA obligatoire (consigne ciblée).
+            turn_ctx.add_message(role="system", content=NEW_PERSON_HINT)
         if is_complaint(text):
             # Plainte contre le démarchage : consigne ciblée pour cette réplique, pas de petit mot.
             turn_ctx.add_message(role="system", content=COMPLAINT_HINT)
             return
-        if is_self_identification(text) and not ud.state.decision_maker_reached and ud.user_turns <= 2:
+        if (is_self_identification(text) and not after_hold and not ud.state.decision_maker_reached
+                and ud.user_turns <= 2):
             # Le décideur a décroché : réplique fixe immédiate, Claude prend la suite à la réponse.
             ud.state.decision_maker_reached = True
             self.session.say(DECIDER_HOOK_LINE, allow_interruptions=True)

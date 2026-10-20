@@ -28,10 +28,12 @@ from pydantic import BaseModel, Field
 
 from .agent.logic import (
     COMPLAINT_HINT,
+    NEW_PERSON_HINT,
     OPTOUT_LINE,
     infer_outcome,
     is_complaint,
     is_goodbye,
+    is_hold_line,
     is_optout_request,
     is_self_identification,
     realtime_llm_options,
@@ -286,7 +288,9 @@ async def run_scenario(
                 say("agent", CLOSING_LINE)
                 fin = "opposition (phrase fixe)"
                 break
-            if is_self_identification(reply) and not state.decision_maker_reached and len(transcript) <= 4:
+            after_hold = is_hold_line(next((t.text for t in reversed(transcript) if t.role == "agent"), ""))
+            if (is_self_identification(reply) and not after_hold and not state.decision_maker_reached
+                    and len(transcript) <= 4):
                 # même réplique fixe qu'en appel réel (AgentAppel)
                 state.decision_maker_reached = True
                 say("agent", DECIDER_HOOK_LINE)
@@ -297,6 +301,9 @@ async def run_scenario(
             system = [{"type": "text", "text": instructions, "cache_control": {"type": "ephemeral"}}]
             if is_complaint(reply):  # même consigne ciblée qu'en appel réel (AgentAppel)
                 system.append({"type": "text", "text": COMPLAINT_HINT})
+            last_agent = next((t.text for t in reversed(transcript) if t.role == "agent"), "")
+            if is_hold_line(last_agent):
+                system.append({"type": "text", "text": NEW_PERSON_HINT})
             for _attempt in range(2):
                 resp = await client.messages.create(
                     model=settings.llm_realtime_model, max_tokens=200,

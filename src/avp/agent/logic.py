@@ -372,6 +372,26 @@ def is_optout_request(text: str) -> bool:
     return any(re.search(p, t) for p in _OPTOUT_PATTERNS)
 
 
+_HOLD_PATTERNS = (r"j['’]attends", r"je patiente", r"je reste en ligne", r"je ne quitte pas")
+NEW_PERSON_HINT = (
+    "Une nouvelle personne vient de prendre la ligne après un transfert : elle n'a pas entendu votre "
+    "présentation. Présentez-vous en entier avant tout : « Bonjour, je suis Sarah, l'assistante virtuelle "
+    "d'OpteoLink, une intelligence artificielle qui organise les rendez-vous de Jean-Baptiste Marin… »"
+)
+
+
+def is_hold_line(text: str) -> bool:
+    """Vrai si Sarah vient d'accepter une mise en attente pour transfert (« Je vous remercie, j'attends. »).
+
+    La réplique suivante vient alors d'une nouvelle personne, qui doit être informée qu'elle parle à
+    une IA (AI Act art. 50) : la présentation sautait après un transfert (simulation du 20/10).
+    """
+    import re
+
+    t = (text or "").lower()
+    return any(re.search(p, t) for p in _HOLD_PATTERNS)
+
+
 def is_complaint(text: str) -> bool:
     """Vrai si le prospect se plaint du démarchage ou demande à ne plus être appelé (règle 6).
 

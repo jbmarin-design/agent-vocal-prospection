@@ -479,3 +479,8 @@ def test_fin_de_conversation():
     assert logic.is_wrap_up_statement("Très bien, Jean-Baptiste vous rappellera jeudi matin.")
     assert not logic.is_wrap_up_statement("Jean-Baptiste passera jeudi à dix heures : ça vous convient ?")
     assert not logic.is_wrap_up_statement("Comment ça se passe chez vous aujourd'hui ?")
+
+
+def test_is_hold_line():
+    assert logic.is_hold_line("Je vous remercie, j'attends.")
+    assert not logic.is_hold_line("Merci. Je vous appelle au sujet des télécoms.")
