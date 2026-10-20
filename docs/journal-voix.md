@@ -11,10 +11,6 @@ Outil : des échantillons de la voix de Sarah peuvent être générés sur la VM
 
 | Date | Appel | Constat | Souhait |
 |---|---|---|---|
-| 20/10 | 38fbde2a | « Hamelin » épelé « h a m… » par le prospect, transcrit en bribes ; Sarah a répété « a, m, e, l, i, n » sans le H et le prospect a validé | Garde-fou : si le nom noté et l'email ne concordent pas, RDV « à confirmer » |
-| 20/10 | 4c200870 | Sarah dit encore « Pour l'invitation » (exemple de decideur.md 6 bis) alors que c'est un email de confirmation | Remplacer par « Pour la confirmation » |
-| 20/10 | 4c200870 | Le nom (Isabelle Marin) était connu, Sarah a quand même demandé « prénom et nom, email » | Ne demander que l'email quand le nom est dans la fiche |
-| 20/10 | 4c200870 | Domaine « lesbranches » répété « les, branchés » | À écouter : acceptable ou épeler les noms de domaine peu courants |
 | 20/10 | — | Voix jugée encore un peu robotique dans l'ensemble | Comparer d'autres voix Cartesia / ElevenLabs et la vitesse (`TTS_SPEED`) |
 
 ## Déjà corrigé
@@ -25,6 +21,10 @@ Outil : des échantillons de la voix de Sarah peuvent être générés sur la VM
 | 20/10 | « EHPAD » épelé « E, H, P, A, D » | Écrit « épade » (`PRONUNCIATIONS_FR`) |
 | 20/10 | Lettre E : « eu » entendu « u », « euh » muet | Écrite « eux » (choix à l'écoute) |
 | 20/10 | « .fr » lu d'un bloc | Dit « èf èr » |
+| 20/10 | « Pour l'invitation » | « Pour la confirmation » (52df178) |
+| 20/10 | Nom connu redemandé | Seul l'email est demandé quand le nom est connu (52df178) |
+| 20/10 | Domaine « lesbranches » dit « les, branchés » | Domaine propre à un établissement épelé (52df178) |
+| 20/10 | « Hamelin » / jl.amelin@ validé | Garde-fou nom/email : RDV « à confirmer » + tâche (52df178) |
 
 ## Échantillons
 
