@@ -454,6 +454,7 @@ def test_pronounce_fr(text, expected):
         ("Oui, c'est moi, le directeur.", True),
         ("Je suis la directrice.", True),
         ("Lui-même !", True),
+        ("Oui pour moi-même.", True),
         ("C'est mon directeur.", False),
         ("Oui, c'est moi, mais je n'ai pas le temps.", False),
         ("Elle n'est pas là.", False),

@@ -377,22 +377,26 @@ def asks_for_dictation(text: str) -> bool:
 
 
 _SELF_ID_PATTERN = (
-    r"^\s*(?:oui|ouais|voilà|allô)?[\s,.!]*"
-    r"(?:c['’]est (?:bien )?(?:moi|lui|elle)(?:-m[êe]me)?|moi-m[êe]me|lui-m[êe]me|elle-m[êe]me|"
-    r"je suis (?:le|la) (?:directeur|directrice)|lui-m[êe]me)"
-    r"(?:[\s,]+(?:le|la) (?:directeur|directrice))?[\s,.!]*$"
+    r"c['’]est (?:bien )?(?:moi|lui|elle)\b|moi-m[êe]me|lui-m[êe]me|elle-m[êe]me|\bmoi m[êe]me\b|"
+    r"je suis (?:le|la) (?:directeur|directrice)"
 )
+_SELF_ID_BLOCKERS = r"\bmais\b|\bpas\b|\bplus\b|\bmon\b|\bma\b|\?"
+SELF_ID_MAX_WORDS = 7
 
 
 def is_self_identification(text: str) -> bool:
     """Vrai si la personne qui a décroché dit simplement être le décideur (« C'est moi-même »).
 
-    Réponse courte et sans autre contenu uniquement : la suite (« merci, je vous appelle de la part
-    de… deux minutes ? ») est alors dite sans attendre Claude (agents.AgentAppel).
+    Réplique courte sans autre contenu (ni « mais », ni négation, ni question) : la suite
+    (« merci, je vous appelle de la part de… deux minutes ? ») est alors dite sans attendre Claude
+    (agents.AgentAppel). Tolère les transcriptions approximatives (« oui pour moi-même »).
     """
     import re
 
-    return bool(re.match(_SELF_ID_PATTERN, (text or "").strip().lower()))
+    t = (text or "").strip().lower()
+    if not t or len(t.split()) > SELF_ID_MAX_WORDS or re.search(_SELF_ID_BLOCKERS, t):
+        return False
+    return bool(re.search(_SELF_ID_PATTERN, t))
 
 
 def voicemail_window_open(answered_at: datetime | None, now: datetime, user_turns: int) -> bool:
