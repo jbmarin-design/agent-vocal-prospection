@@ -223,7 +223,7 @@ _QUESTION_STARTS = (
     "qui ", "quoi", "quel", "quelle", "comment", "pourquoi", "combien", "où ", "quand ", "est-ce",
     "c'est quoi", "c'est qui", "vous êtes", "vous appelez", "c'est à quel", "c'est pour",
 )
-ACK_MIN_WORDS = 3
+ACK_MIN_WORDS = 2  # « C'est moi-même » compte : un blanc de 3,5 s a suivi faute de petit mot (20/10)
 
 
 def pick_acknowledgement(user_text: str, previous: str = "", *, choice=None) -> str | None:
@@ -374,6 +374,25 @@ def asks_for_dictation(text: str) -> bool:
 
     t = (text or "").lower()
     return any(re.search(p, t) for p in _DICTATION_PATTERNS)
+
+
+_SELF_ID_PATTERN = (
+    r"^\s*(?:oui|ouais|voilà|allô)?[\s,.!]*"
+    r"(?:c['’]est (?:bien )?(?:moi|lui|elle)(?:-m[êe]me)?|moi-m[êe]me|lui-m[êe]me|elle-m[êe]me|"
+    r"je suis (?:le|la) (?:directeur|directrice)|lui-m[êe]me)"
+    r"(?:[\s,]+(?:le|la) (?:directeur|directrice))?[\s,.!]*$"
+)
+
+
+def is_self_identification(text: str) -> bool:
+    """Vrai si la personne qui a décroché dit simplement être le décideur (« C'est moi-même »).
+
+    Réponse courte et sans autre contenu uniquement : la suite (« merci, je vous appelle de la part
+    de… deux minutes ? ») est alors dite sans attendre Claude (agents.AgentAppel).
+    """
+    import re
+
+    return bool(re.match(_SELF_ID_PATTERN, (text or "").strip().lower()))
 
 
 def voicemail_window_open(answered_at: datetime | None, now: datetime, user_turns: int) -> bool:

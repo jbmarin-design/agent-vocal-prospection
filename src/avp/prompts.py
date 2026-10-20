@@ -70,6 +70,12 @@ LENGTH_REMINDER = (
     "Rappel, à chaque réplique : trente mots au maximum, une ou deux phrases, un seul paragraphe. "
     "Une seule idée, puis vous laissez parler votre interlocuteur."
 )
+# Réplique FIXE quand le décideur a décroché lui-même (« C'est moi-même ») : dite sans attendre
+# Claude, dont le 1er mot pouvait tarder 3,5 s à ce moment-là (20/10).
+DECIDER_HOOK_LINE = (
+    f"Merci. Je vous appelle de la part de {HUMAN_NAME}, au sujet des télécoms de votre établissement : "
+    "vous avez deux minutes ?"
+)
 # Au revoir FIXE, dit par le worker en fin d'appel (agents.finish_call), jamais par Claude.
 CLOSING_LINE = "Je vous souhaite une très bonne journée. Au revoir."
 

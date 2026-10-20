@@ -33,6 +33,7 @@ from .agent.logic import (
     is_complaint,
     is_goodbye,
     is_optout_request,
+    is_self_identification,
     realtime_llm_options,
 )
 from .config import Settings, get_settings
@@ -46,7 +47,7 @@ from .models import (
     TranscriptTurn,
 )
 from .postcall import analyze_call, apply_analysis
-from .prompts import CLOSING_LINE, build_instructions, opening_line
+from .prompts import CLOSING_LINE, DECIDER_HOOK_LINE, build_instructions, opening_line
 
 HANGUP_MARK = "[RACCROCHE]"
 PICKUP_LINE = "Allô ?"
@@ -285,6 +286,13 @@ async def run_scenario(
                 say("agent", CLOSING_LINE)
                 fin = "opposition (phrase fixe)"
                 break
+            if is_self_identification(reply) and not state.decision_maker_reached and len(transcript) <= 4:
+                # même réplique fixe qu'en appel réel (AgentAppel)
+                state.decision_maker_reached = True
+                say("agent", DECIDER_HOOK_LINE)
+                agent_msgs.append({"role": "assistant", "content": DECIDER_HOOK_LINE})
+                prospect_msgs.append({"role": "user", "content": DECIDER_HOOK_LINE})
+                continue
             # --- Sarah répond (avec un éventuel aller-retour si un outil renvoie une erreur)
             system = [{"type": "text", "text": instructions, "cache_control": {"type": "ephemeral"}}]
             if is_complaint(reply):  # même consigne ciblée qu'en appel réel (AgentAppel)

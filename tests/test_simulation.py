@@ -54,7 +54,7 @@ async def test_rdv_de_bout_en_bout(tmp_path: Path):
                   "artificielle. Vous avez deux minutes ?")],
             [text("Merci beaucoup, à mardi."), tool("terminer_appel", issue="rdv", resume="RDV mardi")],
         ],
-        prospect=["Oui, c'est moi la directrice.", "Oui, mardi dix heures, i.marin@laposte.net, c'est bon."],
+        prospect=["Oui, c'est moi la directrice, je vous écoute.", "Oui, mardi dix heures, i.marin@laposte.net, c'est bon."],
         analysis={"score": "chaud", "score_num": 85, "resume": "RDV pris.",
                   "rdv": {"start": "2026-10-20T10:00:00+02:00", "email": "i.marin@laposte.net"}},
     ))
@@ -90,3 +90,17 @@ def test_scenarios_ehpad_valides():
     st = Settings(_env_file=None, simulations_dir=PROJECT_ROOT / "simulations")
     ids = [s.id for s in load_scenarios("ehpad", st)]
     assert "directrice_rdv" in ids and "opposition" in ids and len(ids) == len(set(ids))
+
+
+async def test_decideur_qui_decroche_replique_fixe(tmp_path: Path):
+    llm = SimpleNamespace(messages=FakeMessages(
+        agent=[[text("Merci, à bientôt."), tool("terminer_appel", issue="refus")]],
+        prospect=["C'est moi-même.", "Non merci."],
+        analysis={"score": "froid", "score_num": 10, "resume": "Refus."},
+    ))
+    sc = Scenario(id="t", titre="test", prospect="directeur")
+    res = await run_scenario(sc, load_campaign("ehpad", PROJECT_ROOT / "campaigns"), client=llm,
+                             settings=settings(tmp_path), slots=[SLOT], now=NOW)
+    from avp.prompts import DECIDER_HOOK_LINE
+    assert res.record.transcript[3].text == DECIDER_HOOK_LINE  # sans appel à Claude
+    assert sum(1 for c in llm.messages.calls if c.get("tools") and c["tools"][0]["name"] != ANALYSIS_TOOL_NAME) == 1

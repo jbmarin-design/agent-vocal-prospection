@@ -444,3 +444,20 @@ def test_asks_for_dictation(text, expected):
 )
 def test_pronounce_fr(text, expected):
     assert logic.pronounce_fr(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("C'est moi-même.", True),
+        ("Oui, c'est moi.", True),
+        ("Oui, c'est moi, le directeur.", True),
+        ("Je suis la directrice.", True),
+        ("Lui-même !", True),
+        ("C'est mon directeur.", False),
+        ("Oui, c'est moi, mais je n'ai pas le temps.", False),
+        ("Elle n'est pas là.", False),
+    ],
+)
+def test_is_self_identification(text, expected):
+    assert logic.is_self_identification(text) is expected

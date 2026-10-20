@@ -26,7 +26,7 @@ from livekit.agents import Agent, RunContext, StopResponse, ToolError, function_
 
 from ..livekit_admin import participant_identity_for
 from ..models import CallOutcome
-from ..prompts import CLOSING_LINE, build_instructions
+from ..prompts import CLOSING_LINE, DECIDER_HOOK_LINE, build_instructions
 from .logic import (
     COMPLAINT_HINT,
     END_OUTCOMES,
@@ -38,6 +38,7 @@ from .logic import (
     is_complaint,
     is_goodbye,
     is_optout_request,
+    is_self_identification,
     looks_like_voicemail,
     pick_acknowledgement,
     pronounce_fr,
@@ -160,6 +161,12 @@ class _BaseProspectAgent(Agent):
             # Plainte contre le démarchage : consigne ciblée pour cette réplique, pas de petit mot.
             turn_ctx.add_message(role="system", content=COMPLAINT_HINT)
             return
+        if is_self_identification(text) and not ud.state.decision_maker_reached and ud.user_turns <= 2:
+            # Le décideur a décroché : réplique fixe immédiate, Claude prend la suite à la réponse.
+            ud.state.decision_maker_reached = True
+            self.session.say(DECIDER_HOOK_LINE, allow_interruptions=True)
+            logger.info("décideur en ligne dès le décroché : réplique fixe")
+            raise StopResponse()
         if not ud.settings.acquiescements or ud.hangup_requested or ud.closing:
             return
         ack = pick_acknowledgement(text, ud.last_ack)
