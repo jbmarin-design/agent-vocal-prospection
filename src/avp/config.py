@@ -100,6 +100,10 @@ class Settings(BaseSettings):
     endpointing_max_delay: float = Field(
         default=2.0, ge=0.5, le=6.0, description="Délai maxi si la phrase semble inachevée (s)"
     )
+    # Pendant une dictée (email, épellation) : on attend plus longtemps avant de considérer que la
+    # personne a fini, sinon ses pauses entre deux lettres la font couper (test du 20/10).
+    endpointing_dictee_min_delay: float = Field(default=1.2, ge=0.3, le=4.0)
+    endpointing_dictee_max_delay: float = Field(default=3.5, ge=1.0, le=8.0)
     dry_run: bool = Field(default=False, description="Si vrai : aucun appel réel, aucune écriture Axonaut")
 
     # --- Chemins dérivés ---------------------------------------------------------

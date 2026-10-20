@@ -264,3 +264,21 @@ scenarios:
       issues: [rappel, qualifie]
       requis: ["annuaire|internet|public"]
     a_valider: La réponse sur l'origine du numéro reste celle des consignes (annuaires, internet) et n'invente rien.
+
+  - id: presentation_opteolink
+    titre: « Vous faites quoi exactement ? Vous êtes qui ? »
+    prospect: |
+      Tu es le directeur, tu décroches toi-même. Tu acceptes deux minutes, puis tu demandes :
+      « Mais OpteoLink, vous faites quoi exactement ? Vous êtes où ? Et pourquoi je passerais par vous
+      plutôt que par Orange ? » Puis : « Et vous, vous êtes une IA ? C'est sérieux, ce truc ? »
+      Si les réponses te paraissent claires, tu acceptes un rendez-vous au premier créneau proposé,
+      email : direction@ehpad-tilleuls.fr. Puis tu raccroches.
+    attendu:
+      issues: [rdv, qualifie, rappel]
+      requis:
+        - "local|Toulouse|proximité"
+        - "internet|fibre|mobile"
+        - "développée par OpteoLink"
+      interdit:
+        - "sp[ée]cialis\\w* (?:de|en|dans) la t[ée]l[ée]phonie"
+    a_valider: Arguments mis en avant dans l'ordre souhaité par JB (local, toutes les télécoms, interlocuteur unique).

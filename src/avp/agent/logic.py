@@ -341,6 +341,17 @@ def is_complaint(text: str) -> bool:
     return any(re.search(p, t) for p in _COMPLAINT_PATTERNS)
 
 
+_DICTATION_PATTERNS = (r"[ée]pel", r"e-?mail", r"adresse (?:mail|[ée]lectronique)", r"arobase", r"c['’]est bien [çc]a")
+
+
+def asks_for_dictation(text: str) -> bool:
+    """Vrai si la réplique de Sarah appelle une dictée (email, épellation, vérification d'adresse)."""
+    import re
+
+    t = (text or "").lower()
+    return any(re.search(p, t) for p in _DICTATION_PATTERNS)
+
+
 def voicemail_window_open(answered_at: datetime | None, now: datetime, user_turns: int) -> bool:
     """La détection par la transcription ne joue qu'au tout début de l'appel (annonce d'accueil),
     jamais au milieu d'un échange avec une secrétaire."""

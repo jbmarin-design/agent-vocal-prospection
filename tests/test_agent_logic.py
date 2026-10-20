@@ -418,3 +418,16 @@ def test_is_complaint(text, expected):
 )
 def test_is_optout_request(text, expected):
     assert logic.is_optout_request(text) is expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Pour l'invitation, pouvez-vous me donner votre email ?", True),
+        ("Pouvez-vous me l'épeler, s'il vous plaît ?", True),
+        ("Je répète : j, l, point, h, a, m, e, l, i, n, arobase, ehpad, point, fr. C'est bien ça ?", True),
+        ("Vous avez deux minutes ?", False),
+    ],
+)
+def test_asks_for_dictation(text, expected):
+    assert logic.asks_for_dictation(text) is expected

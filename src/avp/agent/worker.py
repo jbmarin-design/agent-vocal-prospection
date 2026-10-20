@@ -41,6 +41,7 @@ from .logic import (
     GOODBYE_GRACE_S,
     PRESENCE_PROMPTS,
     CallUserData,
+    asks_for_dictation,
     classify_sip_failure,
     console_metadata,
     dump_usage,
@@ -172,6 +173,7 @@ async def entrypoint(ctx: JobContext) -> None:
     tasks: list[asyncio.Task] = []
     away_count = 0
     closing_remark = False  # dernière réplique du prospect = remerciement / au revoir
+    dictation = False  # Sarah attend un email épelé : délai de fin de tour allongé
 
     # 6. Fin d'appel (toujours exécuté, même après une exception) -----------------
     async def on_shutdown(reason: str = "") -> None:
@@ -236,12 +238,30 @@ async def entrypoint(ctx: JobContext) -> None:
         text = getattr(item, "text_content", "") or ""
         if role == "user":
             closing_remark = is_closing_remark(text)
-        elif role == "assistant" and not (ud.hangup_requested or ud.closing):
+        elif role == "assistant":
+            _set_dictation(asks_for_dictation(text))
+        if role == "assistant" and not (ud.hangup_requested or ud.closing):
             if is_goodbye(text):
                 tasks.append(asyncio.create_task(_end_guard(item, "au revoir sans terminer_appel")))
             elif closing_remark and not ends_with_question(text):
                 # Le prospect a remercié / dit au revoir et l'agent n'attend plus de réponse.
                 tasks.append(asyncio.create_task(_end_guard(item, "fin de conversation (remerciements)")))
+
+    def _set_dictation(on: bool) -> None:
+        """Délai de fin de tour allongé pendant une dictée d'email, normal le reste du temps."""
+        nonlocal dictation
+        if on == dictation:
+            return
+        dictation = on
+        s = ud.settings
+        opts = ({"min_delay": s.endpointing_dictee_min_delay, "max_delay": s.endpointing_dictee_max_delay} if on
+                else {"min_delay": s.endpointing_min_delay, "max_delay": s.endpointing_max_delay})
+        try:
+            session.update_options(endpointing_opts=opts)
+            logger.info("dictée %s : fin de tour %.1f à %.1f s", "en cours" if on else "terminée",
+                        opts["min_delay"], opts["max_delay"])
+        except Exception:
+            logger.warning("réglage de fin de tour impossible", exc_info=True)
 
     async def _end_guard(last_item, reason: str) -> None:
         """Termine l'appel si, quelques secondes après cette réplique, personne n'a relancé l'échange."""
