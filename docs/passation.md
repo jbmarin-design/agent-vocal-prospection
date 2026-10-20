@@ -57,6 +57,7 @@ orchestrateur (avp run / avp call test) ──► LiveKit server + LiveKit SIP (
 - **XiVO fait tout côté téléphonie** : routage, enregistrement (MixMonitor), transfert. L'agent envoie seulement l'INVITE avec `X-AVP-Call-ID`. Pas de variables d'enregistrement côté agent.
 - **Pas de transfert à chaud** : JB est sur le terrain. `TRANSFER_TARGET` vide → l'outil de transfert n'est pas proposé ; l'agent prend RDV ou rappel.
 - **RDV** : mardi et jeudi en direct (invitation au client) ; lundi et vendredi possibles mais **à confirmer par email à JB** avant invitation. Rien dans l'agenda Axonaut (Axonaut est synchronisé avec Google). RDV **sur place dans l'établissement**, 30 min par défaut (`rdv.duree_min`, peut-être à passer à 60).
+  - **Mise à jour 20/10** : sans Google OAuth, le RDV est créé dans l'**agenda Axonaut** (événement « Meeting » attribué à JB), qui le synchronise avec Google Agenda ; le client reçoit un **email de confirmation envoyé par Axonaut** ; un RDV à confirmer donne une **tâche Axonaut** à JB au lieu d'un email.
 - **Axonaut** : écrire ce qui a été dit (événement « Appel IA », opportunité dans le pipeline « EHPAD 2026 »), créer les **contacts recueillis**, et des **tâches de relance** pour les échéances lointaines (contrat qui finit dans 1–2 ans : relance 90 jours avant).
 - **Discours EHPAD** :
   - OpteoLink présentée comme **acteur local basé à Toulouse** (siège réel à Gimont, mais agences à Toulouse), 18 ans d'expérience en téléphonie pro (standards, DECT, internet/fibre, mobiles pro), interlocuteur unique et proche.

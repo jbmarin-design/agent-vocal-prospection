@@ -452,8 +452,15 @@ class AxonautClient:
         duration_min: int | None = None,
         opportunity_id: int | None = None,
         is_done: bool = True,
+        employee_email: str | None = None,
+        users: list[str] | None = None,
     ) -> dict:
-        """Événement de timeline (nature : 1=RDV, 2=Email, 3=Appel, 4=Courrier, 5=SMS, 6=Autre)."""
+        """Événement de timeline (nature : 1=RDV, 2=Email, 3=Appel, 4=Courrier, 5=SMS, 6=Autre).
+
+        `users` : utilisateurs Axonaut concernés (défaut : l'utilisateur du .env) ; un RDV (nature 1)
+        attribué à un utilisateur remonte dans son agenda, donc dans Google Agenda s'il est synchronisé.
+        `employee_email` : contact de la société (destinataire d'un email, nature 2).
+        """
         if nature not in EVENT_NATURES:
             raise ValueError(f"nature d'événement invalide : {nature}")
         payload: dict[str, Any] = {
@@ -465,9 +472,14 @@ class AxonautClient:
             "duration": int(duration_min) if duration_min is not None else None,
             "opportunity_id": int(opportunity_id) if opportunity_id else None,
             "is_done": bool(is_done),
-            "employee_email": self.user_email or None,
+            "employee_email": employee_email or None,
+            "users": users if users is not None else ([self.user_email] if self.user_email else None),
         }
         return await self._write("POST", "/events", payload)
+
+    async def send_event(self, event_id: int) -> dict:
+        """Envoie par email un événement de nature « email » (refusé par Axonaut pour un RDV)."""
+        return await self._request("POST", f"/events/{int(event_id)}/send")
 
     async def create_employee(
         self,

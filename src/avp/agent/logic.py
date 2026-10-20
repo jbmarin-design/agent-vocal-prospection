@@ -213,6 +213,7 @@ def is_closing_remark(text: str) -> bool:
 
 _WRAP_UP_PATTERNS = (
     r"recevrez (?:l['’])?invitation", r"invitation (?:va |vous )?(?:arriver|parvenir|partir)",
+    r"email de confirmation", r"recevrez (?:un|une) (?:e-?mail|confirmation)",
     r"passera (?:vous voir )?(?:lundi|mardi|mercredi|jeudi|vendredi)", r"vous rappellera",
     r"je (?:lui )?transmets", r"[àa] (?:lundi|mardi|mercredi|jeudi|vendredi)\b",
 )

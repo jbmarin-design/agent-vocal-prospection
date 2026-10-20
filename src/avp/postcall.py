@@ -580,6 +580,107 @@ def to_axonaut_html(text: str) -> str:
     return html.escape(text, quote=False).replace("\n", "<br>")
 
 
+def confirmation_email_html(record: CallRecordFile, tz: ZoneInfo) -> str:
+    """Email de confirmation de RDV envoyé au client depuis Axonaut, au nom de Jean-Baptiste."""
+    from .prompts import HUMAN_NAME, format_slot_fr
+
+    st, p = record.state, record.metadata.prospect
+    rdv = st.rdv
+    assert rdv is not None
+    who = rdv.avec or st.contact_name
+    lieu = f"dans votre établissement{f' à {p.city}' if p.city else ''}"
+    text = (
+        f"Bonjour{f' {who}' if who else ''},\n\n"
+        f"Suite à votre échange avec Sarah, l'assistante virtuelle d'OpteoLink, je vous confirme notre "
+        f"rendez-vous le {format_slot_fr(rdv.start, str(tz))}, {lieu}, pour l'audit gratuit et sans engagement "
+        f"de vos télécoms (environ {rdv.duree_min} minutes).\n\n"
+        "Si ce créneau ne vous convient plus, il vous suffit de répondre à ce message.\n\n"
+        f"À très bientôt,\n{HUMAN_NAME}\nOpteoLink"
+    )
+    return to_axonaut_html(text)
+
+
+async def _axonaut_rdv(
+    axonaut: AxonautClient, record: CallRecordFile, analysis: CallAnalysis | None, campaign: Campaign,
+    company_id: int, opp_id: int | None, tz: ZoneInfo, today: date, result: dict[str, Any], fail: Any,
+) -> None:
+    """RDV pris pendant l'appel → agenda Axonaut (et Google par synchronisation) + confirmation au client.
+
+    RDV « à confirmer » (jour hors plages directes, créneau hors liste, email douteux) : pas d'email
+    au client, une tâche pour Jean-Baptiste à la place.
+    """
+    from .prompts import format_slot_fr
+
+    st, p = record.state, record.metadata.prospect
+    rdv = st.rdv
+    assert rdv is not None
+    when = format_slot_fr(rdv.start, str(tz))
+    details = [
+        f"Avec : {rdv.avec or st.contact_name or 'à préciser'}",
+        f"Email : {rdv.email or 'non relevé'}",
+        f"Téléphone de l'établissement : {to_national_fr(p.phone)}",
+        f"Lieu : dans l'établissement{f', {p.city}' if p.city else ''}",
+        "Objet : audit télécom gratuit et sans engagement",
+    ]
+    if rdv.notes:
+        details.append(f"À vérifier : {rdv.notes}")
+    if analysis:
+        details += ["", f"Résumé de l'appel : {analysis.resume}"]
+    try:
+        ev = await axonaut.create_event(
+            company_id=company_id,
+            title=f"{'[À CONFIRMER] ' if rdv.a_confirmer else ''}RDV audit télécom — {p.name}"[:255],
+            content=to_axonaut_html("\n".join(details)),
+            date=rdv.start,
+            nature=1,
+            duration_min=rdv.duree_min,
+            opportunity_id=opp_id,
+            is_done=False,
+        )
+        result["rdv_event_id"] = _id(ev)
+    except AxonautError as exc:
+        fail("rendez-vous dans l'agenda Axonaut", exc)
+
+    async def confirm_task(why: str) -> None:
+        try:
+            task = await axonaut.create_task(
+                title=f"Confirmer le RDV du {when} — {p.name}"[:255],
+                company_id=company_id,
+                description=f"{why}\nRDV pris par l'agent vocal ; envoyer la confirmation au client une fois validé.",
+                due=today,
+                priority="haute",
+            )
+            result["task_ids"].append(_id(task))
+        except AxonautError as exc:
+            fail("tâche de confirmation du RDV", exc)
+
+    if rdv.a_confirmer or not rdv.email:
+        await confirm_task(rdv.notes or "Jour hors des plages de RDV directs : à confirmer avant l'envoi.")
+        return
+    try:
+        employees = await axonaut.list_company_employees(company_id)
+        if not any((e.get("email") or "").lower() == rdv.email.lower() for e in employees):
+            first, _, last = (rdv.avec or "").partition(" ")
+            await axonaut.create_employee(company_id=company_id, firstname=first, lastname=last, email=rdv.email,
+                                          job=st.contact_role)
+        mail = await axonaut.create_event(
+            company_id=company_id,
+            title="Confirmation de votre rendez-vous avec OpteoLink",
+            content=confirmation_email_html(record, tz),
+            date=db.utcnow(),
+            nature=2,
+            opportunity_id=opp_id,
+            is_done=True,
+            employee_email=rdv.email,
+        )
+        result["confirmation_email_id"] = _id(mail)
+        await axonaut.send_event(int(_id(mail)))
+        result["confirmation_envoyee"] = rdv.email
+    except AxonautError as exc:
+        fail("email de confirmation du RDV", exc)
+        await confirm_task(f"L'email de confirmation n'a pas pu partir ({exc}).")
+
+
 def _opportunity_comment(outcome: CallOutcome, analysis: CallAnalysis | None, when: datetime, tz: ZoneInfo) -> str:
     loc = _local(when, tz) or when
     head = f"[{loc.strftime('%d/%m/%Y')} appel IA] {OUTCOME_LABELS.get(outcome, outcome.value)}"
@@ -733,9 +834,12 @@ async def sync_axonaut(
         return result
 
     if st.rdv is not None and (outcome is CallOutcome.RDV or (analysis and analysis.rdv_confirme)):
-        # Le RDV est posé dans Google Agenda (avp.agenda.sync_agenda), synchronisé avec Axonaut :
-        # rien à écrire dans l'agenda Axonaut. L'événement « Appel IA » ci-dessus le mentionne.
-        pass
+        if settings.google_enabled:
+            # RDV posé dans Google Agenda par avp.agenda.sync_agenda (process_call).
+            pass
+        else:
+            # RDV dans l'agenda Axonaut, synchronisé avec Google Agenda par Axonaut (validé le 20/10).
+            await _axonaut_rdv(axonaut, record, analysis, campaign, company_id, opp_id, tz, today, result, fail)
 
     elif outcome is CallOutcome.RAPPEL or st.callback is not None:
         cb = st.callback

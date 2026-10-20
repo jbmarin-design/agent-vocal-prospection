@@ -190,7 +190,8 @@ async def test_write_payloads():
     assert (m, path) == ("POST", "/api/v2/events")
     assert len(body["title"]) == 255
     assert body["date"] == "2026-10-05T10:00:00+02:00"
-    assert body["duration"] == 4 and body["opportunity_id"] == 12 and body["employee_email"] == "jb@example.test"
+    assert body["duration"] == 4 and body["opportunity_id"] == 12 and body["users"] == ["jb@example.test"]
+    assert "employee_email" not in body  # réservé au contact destinataire d'un email
     _, _, opp = bodies[1]
     assert opp["pipe_step_name"] == "S" and opp["business_manager_email"] == "jb@example.test"
     assert opp["probability"] == 100.0

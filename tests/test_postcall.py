@@ -236,6 +236,10 @@ class FakeAxonaut:
         self.calls.append(("create_employee", kw))
         return self._next()
 
+    async def send_event(self, event_id: int) -> dict:
+        self.calls.append(("send_event", {"id": event_id}))
+        return {"status_code": 200, "message": "Email has been sent."}
+
     async def aclose(self) -> None:
         pass
 
@@ -254,14 +258,17 @@ async def test_sync_rdv_creates_opportunity_events_task(tmp_path: Path):
     assert opp["pipe_name"] == "EHPAD 2026" and opp["step_name"] == "RDV pris"
     assert opp["amount"] == 1500.0 and opp["probability"] == 85.0
     events = ax.of("create_event")
-    # Le RDV va dans Google Agenda (avp.agenda), pas dans l'agenda Axonaut : un seul événement « appel ».
-    (call_ev,) = events
+    # Sans Google Agenda : appel + RDV dans l'agenda Axonaut (synchronisé avec Google par Axonaut).
+    call_ev, rdv_ev = events
+    assert rdv_ev["nature"] == 1 and rdv_ev["date"] == rdv_start and not rdv_ev["is_done"]
     assert call_ev["nature"] == 3 and call_ev["title"] == "Appel IA — RDV pris — chaud (85/100)"
     assert call_ev["duration_min"] == 3 and call_ev["date"] == START and call_ev["opportunity_id"] == res["opportunity_id"]
     assert "Combien de lits ? → 80" in call_ev["content"] and "Budget contraint" in call_ev["content"]
     assert str(tmp_path / "transcripts" / "abc123.json") in call_ev["content"]
     assert "RDV :" in call_ev["content"]
-    assert ax.of("create_task") == [] and "rdv_event_id" not in res
+    # Pas d'email dans le RDV : pas de confirmation au client, une tâche pour Jean-Baptiste.
+    assert [t["title"] for t in ax.of("create_task")][0].startswith("Confirmer le RDV du")
+    assert res["rdv_event_id"] and ax.of("send_event") == []
 
 
 async def test_sync_echeance_lointaine_cree_une_relance(tmp_path: Path):
@@ -563,3 +570,16 @@ async def test_evenement_axonaut_html_avec_transcription(tmp_path: Path):
     content = ax.of("create_event")[0]["content"]
     assert "<br>" in content and "\n" not in content
     assert "Transcription :<br>" in content and "Sarah : Bonjour" in content and "Prospect : Oui, bonjour." in content
+
+
+async def test_sync_rdv_envoie_la_confirmation_au_client(tmp_path: Path):
+    ax = FakeAxonaut()
+    rec = record(CallOutcome.RDV, rdv=Rdv(start=datetime(2026, 10, 22, 8, 30, tzinfo=UTC), duree_min=30,
+                                          avec="Isabelle Marin", email="i.marin@laposte.net"))
+    res = await sync_axonaut(rec, analysis(score="chaud", score_num=85, rdv_confirme=True), campaign(),
+                             axonaut=ax, settings=settings_for(tmp_path))
+    assert res["erreurs"] == [] and res["confirmation_envoyee"] == "i.marin@laposte.net"
+    mail = next(e for e in ax.of("create_event") if e["nature"] == 2)
+    assert mail["employee_email"] == "i.marin@laposte.net" and "jeudi 22 octobre à 10 h 30" in mail["content"]
+    assert ax.of("send_event") and ax.of("create_employee")[0]["email"] == "i.marin@laposte.net"
+    assert ax.of("create_task") == []
