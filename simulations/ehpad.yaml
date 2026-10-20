@@ -32,7 +32,9 @@ scenarios:
       issues: [rdv]
       rdv: true
       requis: ["intelligence artificielle|assistante virtuelle"]
-      interdit: *interdits_prix
+      interdit:
+        - "(économis\\w*|gagner|réduire|baisser)[^.?!]{0,50}(pour ?cent|%|euros?|€)"
+        - "je suis Sarah"   # elle a décroché elle-même : pas de seconde présentation
 
   - id: barrage_rappel
     titre: Secrétaire, directrice absente, coordonnées données
@@ -66,6 +68,7 @@ scenarios:
     attendu:
       issues: [rappel]
       requis: ["intelligence artificielle|assistante virtuelle"]
+      interdit: ["je suis Sarah"]
       rdv: false
 
   - id: nouveau_directeur
