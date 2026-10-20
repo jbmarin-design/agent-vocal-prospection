@@ -1,7 +1,9 @@
 # syntax=docker/dockerfile:1.7
 # Images de l'agent vocal (contexte de build : racine du dépôt).
 #
-#   docker compose build                     (depuis deploy/)
+# En temps normal, ces images sont construites et publiées par la CI (.github/workflows/ci.yml) sur
+# ghcr.io/jbmarin-design/avp-<cible>. Construction locale :
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml build   (depuis deploy/)
 #   docker build -f deploy/Dockerfile --target agent-worker -t avp/agent-worker:local .
 #   docker build -f deploy/Dockerfile --target orchestrator -t avp/orchestrator:local .
 #

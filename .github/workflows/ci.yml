@@ -1,0 +1,90 @@
+# CI/CD de l'agent vocal : tests puis images Docker publiées sur GitHub Container Registry.
+#
+# - push sur main      → tests, puis images étiquetées `main` et `<sha court>`
+# - push d'un tag vX.Y.Z → tests, puis images étiquetées `vX.Y.Z` et `<sha court>`
+# - pull request       → tests seulement
+#
+# Images : ghcr.io/jbmarin-design/avp-agent-worker et ghcr.io/jbmarin-design/avp-orchestrator
+# (cibles du même nom dans deploy/Dockerfile). Sur la VM, la version tirée se choisit avec
+# AVP_VERSION dans deploy/.env (voir docs/exploitation.md § Versions et mises à jour).
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  pull_request:
+  workflow_dispatch:
+
+# Une seule exécution à la fois par branche ou tag : la plus récente remplace celle en cours.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests (pytest + ruff)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Installer
+        run: pip install -e ".[dev]"
+      - name: pytest
+        run: pytest -q
+      - name: ruff
+        run: ruff check src tests
+
+  images:
+    name: Image ${{ matrix.target }}
+    needs: tests
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [agent-worker, orchestrator]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Étiquettes
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/avp-${{ matrix.target }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=,format=short
+          labels: |
+            org.opencontainers.image.title=avp-${{ matrix.target }}
+            org.opencontainers.image.description=Agent vocal de prospection OpteoLink (${{ matrix.target }})
+      - name: Construire et publier
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          target: ${{ matrix.target }}
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Cache des couches dans GitHub Actions, une portée par image : seules les couches
+          # touchées (code, ou dépendances si pyproject.toml change) sont reconstruites.
+          cache-from: type=gha,scope=${{ matrix.target }}
+          cache-to: type=gha,scope=${{ matrix.target }},mode=max

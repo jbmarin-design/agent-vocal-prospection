@@ -141,7 +141,13 @@ cat > "$INSTALL_DIR/deploy/.env" <<EOF
 AVP_UID=$AVP_UID
 AVP_GID=$AVP_GID
 COMPOSE_PROJECT_NAME=avp
+# Version des images agent-worker / orchestrator tirées de ghcr.io (tag vX.Y.Z, main ou SHA court)
+AVP_VERSION=${AVP_VERSION:-main}
 EOF
+if [[ "${BUILD_LOCAL:-0}" == "1" ]]; then
+  # Images construites sur la VM (sans registre) : toutes les commandes docker compose lisent l'override.
+  echo "COMPOSE_FILE=docker-compose.yml:docker-compose.build.yml" >> "$INSTALL_DIR/deploy/.env"
+fi
 chown "$AVP_USER:$AVP_USER" "$INSTALL_DIR/deploy/.env"
 
 # ---------------------------------------------------------------------------------------------
@@ -194,11 +200,18 @@ info "/usr/local/bin/avp → docker compose exec orchestrator avp …"
 # ---------------------------------------------------------------------------------------------
 log "9/9 Construction et démarrage des conteneurs"
 if [[ "${SKIP_START:-0}" == "1" ]]; then
-  info "SKIP_START=1 : démarrage manuel : cd $INSTALL_DIR/deploy && docker compose up -d --build"
+  info "SKIP_START=1 : démarrage manuel : cd $INSTALL_DIR/deploy && docker compose pull && docker compose up -d"
   exit 0
 fi
 cd "$INSTALL_DIR/deploy"
-sudo -u "$AVP_USER" docker compose build
+# Images de l'agent publiées par la CI sur ghcr.io (si les paquets sont privés : `docker login ghcr.io`
+# en tant que $AVP_USER avant). Sans registre : BUILD_LOCAL=1 construit les images sur place.
+if [[ "${BUILD_LOCAL:-0}" == "1" ]]; then
+  sudo -u "$AVP_USER" docker compose build agent-worker orchestrator
+  sudo -u "$AVP_USER" docker compose pull redis livekit sip
+else
+  sudo -u "$AVP_USER" docker compose pull
+fi
 sudo -u "$AVP_USER" docker compose up -d redis livekit sip
 
 info "attente de LiveKit et de LiveKit SIP…"

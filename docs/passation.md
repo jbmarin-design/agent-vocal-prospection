@@ -33,7 +33,7 @@ orchestrateur (avp run / avp call test) ──► LiveKit server + LiveKit SIP (
 - **Seul `src/avp/agent/` importe `livekit.agents`** (image `agent-worker`). Le reste n'importe que `livekit-api`. La logique pure (prompts, planification, mapping Axonaut, état d'appel) est testable sans LiveKit.
 - Contrats partagés : `models.py`, `db.py`, `config.py` (paramètres uniquement via `get_settings()` / `.env`).
 - Tests : `pytest -q && ruff check src tests` (194 tests verts au dernier commit). Aucun appel réseau réel dans les tests.
-- Déploiement : `deploy/` (docker compose, `network_mode: host`, nftables table `inet avp`), `deploy/install.sh`.
+- Déploiement : `deploy/` (docker compose, `network_mode: host`, nftables table `inet avp`), `deploy/install.sh`. CI/CD : `.github/workflows/ci.yml` (tests + ruff, puis images `ghcr.io/jbmarin-design/avp-agent-worker` et `avp-orchestrator` étiquetées `vX.Y.Z` / `main` / SHA court) ; la VM tire la version `AVP_VERSION` de `deploy/.env`. Procédure complète (release, déploiement, retour arrière) : `docs/exploitation.md` § 13.
 - Docs dans `docs/` : installation, architecture, schémas Mermaid, xivo-trunk, google-agenda, axonaut, prompts, exploitation, protocoles de test par phase (`docs/protocoles/phase-N.md`), journal de tests.
 
 ### Fichiers clés
@@ -90,11 +90,16 @@ Garde cette ligne si le sujet revient, avec tact.
 ### Commandes usuelles (sur la VM, en root)
 
 ```bash
-# mettre à jour et redéployer (git en tant que avp, sinon « dubious ownership »)
-sudo -u avp git -C /opt/agent-vocal-prospection pull
+# mettre à jour et redéployer : les images sont construites par la CI GitHub et tirées de ghcr.io,
+# la version est choisie par AVP_VERSION dans deploy/.env (tag vX.Y.Z, ou main). Plus de build sur la VM.
+sudo -u avp git -C /opt/agent-vocal-prospection pull     # prompts, campagnes, simulations, compose (git en tant que avp)
 cd /opt/agent-vocal-prospection/deploy          # docker compose doit être lancé d'ici
-sudo -u avp docker compose build agent-worker orchestrator   # les DEUX images (post-appel = orchestrator)
-sudo -u avp docker compose up -d --force-recreate agent-worker orchestrator
+sed -i 's/^AVP_VERSION=.*/AVP_VERSION=v0.1.0/' .env      # version voulue (noter l'ancienne pour un retour arrière)
+sudo -u avp docker compose pull agent-worker orchestrator
+sudo -u avp docker compose up -d agent-worker orchestrator
+sudo -u avp docker compose images agent-worker orchestrator   # version réellement en service
+# retour arrière : remettre l'ancienne AVP_VERSION, puis les mêmes pull + up -d (aucune reconstruction)
+# construire localement (dépannage) : docs/exploitation.md § 13 (deploy/docker-compose.build.yml)
 
 avp check                                        # état général
 avp call test --number +336XXXXXXXX --campaign ehpad --name "EHPAD test JB" --city Auch
@@ -128,10 +133,10 @@ Autres corrections notables : catégorie AMD lue avec `.value` (str-Enum) ; `env
 3. **Google Agenda** (phase 4) : créer le client OAuth « application de bureau » (écran de consentement interne), mettre `GOOGLE_CLIENT_ID/SECRET` dans `.env`, puis `avp google auth` via tunnel SSH (port 8765), `avp google check`, `avp google test-mail`. Voir `docs/google-agenda.md`.
 4. **Premier appel non-test** vers un vrai prospect importé d'Axonaut (phase 3) pour vérifier l'écriture Axonaut, notamment la création des contacts (le champ `job` d'un contact n'est pas garanti par l'API ; le code réessaie sans).
 5. Ensuite : campagnes automatiques (phase 5, `actif: true`), rapport hebdomadaire (phase 6), pilote 20 appels EHPAD (phase 7).
-6. Plus tard : dépôt privé, migration GitLab + `.gitlab-ci.yml`, éventuelle revente de l'agent à des clients.
+6. Plus tard : dépôt privé (les paquets ghcr.io deviennent privés : `docker login ghcr.io` sur la VM avec un jeton `read:packages`, voir `docs/exploitation.md` § 13), migration GitLab (transposer `.github/workflows/ci.yml` en `.gitlab-ci.yml` : mêmes étapes tests → build des deux cibles → push vers le registre GitLab, et changer le préfixe d'image dans `deploy/docker-compose.yml`), éventuelle revente de l'agent à des clients.
 
 ## 7. Façon de travailler avec JB
 
 - Il exécute lui-même les commandes sur la VM et colle les sorties ou logs. Donne-lui des blocs de commandes prêts à copier, en précisant où les lancer.
-- Chaque modification : code + tests + `ruff`, commit en français, push sur `main`, puis lui donner les 4 commandes de redéploiement et le scénario à rejouer.
+- Chaque modification : code + tests + `ruff`, commit en français, push sur `main` ; attendre que la CI (onglet Actions) ait publié les images, puis déployer `AVP_VERSION=main` (ou poser un tag `vX.Y.Z` pour une version validée) avec les commandes ci-dessus, et donner le scénario à rejouer.
 - Il veut des explications claires sur le *pourquoi*, sans jargon inutile, et garder la main sur le code.

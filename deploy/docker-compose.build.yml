@@ -1,0 +1,28 @@
+# Override : construire les images de l'agent localement au lieu de les tirer de ghcr.io
+# (développement, panne du registre, test d'une modification non poussée).
+#
+# Depuis deploy/ :
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml build agent-worker orchestrator
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --force-recreate agent-worker orchestrator
+#
+# Pour que TOUTES les commandes docker compose l'utilisent sans -f (VM sans accès au registre),
+# ajouter dans deploy/.env : COMPOSE_FILE=docker-compose.yml:docker-compose.build.yml
+#
+# Les images locales s'appellent avp/<cible>:local, pour ne jamais être confondues avec celles du registre.
+# Revenir aux images du registre : `docker compose pull && docker compose up -d --force-recreate agent-worker
+# orchestrator` (sans -f ni COMPOSE_FILE : seul docker-compose.yml est lu).
+
+services:
+  agent-worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: agent-worker
+    image: avp/agent-worker:local
+
+  orchestrator:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: orchestrator
+    image: avp/orchestrator:local

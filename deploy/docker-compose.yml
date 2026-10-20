@@ -2,7 +2,8 @@
 #
 # Utilisation (depuis le dossier deploy/) :
 #   ./render-config.sh                 # génère rendered/livekit.yaml, rendered/sip.yaml (à partir de ../.env)
-#   docker compose up -d --build       # construit les images et démarre tout
+#   docker compose pull                # tire les images (agent-worker, orchestrator : version AVP_VERSION)
+#   docker compose up -d               # démarre tout
 #   ./healthcheck.sh                   # vérifie redis, livekit, sip, worker
 #   docker compose logs -f sip agent-worker
 #
@@ -10,8 +11,14 @@
 # ne passent pas bien par le NAT de Docker, et tout le trafic interne se fait sur 127.0.0.1.
 # Le pare-feu (nftables, voir nftables.conf.tmpl) filtre l'accès depuis l'extérieur.
 #
-# Images : figer les versions après une installation validée (remplacer :latest par le tag ou le digest
-# affiché par `docker image ls --digests`).
+# Images de l'agent (agent-worker, orchestrator) : construites et publiées par la CI GitHub Actions
+# (.github/workflows/ci.yml) sur ghcr.io. La version se choisit dans deploy/.env :
+#   AVP_VERSION=v0.1.0   # un tag de release (recommandé), ou `main` (dernier commit), ou un SHA court
+# Mise à jour / retour arrière : changer AVP_VERSION puis `docker compose pull && docker compose up -d`.
+# Construire localement à la place (sans registre) : voir docker-compose.build.yml.
+#
+# Images publiques (redis, livekit, sip) : figer les versions après une installation validée
+# (remplacer :latest par le tag ou le digest affiché par `docker image ls --digests`).
 
 name: avp
 
@@ -105,11 +112,8 @@ services:
 
   agent-worker:
     <<: *app-common
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-      target: agent-worker
-    image: avp/agent-worker:local
+    # Image publiée par la CI (GitHub Actions) ; version choisie par AVP_VERSION dans deploy/.env.
+    image: ghcr.io/jbmarin-design/avp-agent-worker:${AVP_VERSION:-main}
     command: ["python", "-m", "avp.agent.worker", "start"]
     depends_on:
       livekit:
@@ -129,11 +133,8 @@ services:
 
   orchestrator:
     <<: *app-common
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-      target: orchestrator
-    image: avp/orchestrator:local
+    # Image publiée par la CI (GitHub Actions) ; version choisie par AVP_VERSION dans deploy/.env.
+    image: ghcr.io/jbmarin-design/avp-orchestrator:${AVP_VERSION:-main}
     command: ["avp", "run"]
     depends_on:
       livekit:

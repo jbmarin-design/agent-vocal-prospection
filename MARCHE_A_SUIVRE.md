@@ -155,12 +155,16 @@ sudo -u avp docker compose ps
 
 **Si ça coince** : `docker compose logs livekit sip`, puis `docs/installation.md` § Dépannage.
 
-### 1.7 Construire le worker et l'orchestrateur
+### 1.7 Récupérer le worker et l'orchestrateur
 
-**Faire** (environ 10 minutes : le build télécharge les modèles de détection de voix et de fin de tour) :
+**Faire** : les images sont construites par la CI GitHub et publiées sur ghcr.io ; la version se choisit
+par `AVP_VERSION` dans `deploy/.env` (voir `docs/exploitation.md` § 13, y compris `docker login ghcr.io`
+si les paquets sont privés) :
 ```bash
-sudo -u avp docker compose build agent-worker orchestrator
+sudo -u avp docker compose pull agent-worker orchestrator
 ```
+Sans registre, construction locale (environ 10 minutes : téléchargement des modèles de détection de voix
+et de fin de tour) : `sudo -u avp docker compose -f docker-compose.yml -f docker-compose.build.yml build agent-worker orchestrator`.
 
 Créez ensuite la commande `avp` sur l'hôte. Elle lance la CLI dans le conteneur :
 ```bash
