@@ -277,6 +277,30 @@ _SPELLED_LETTER = r"(?:(?<=[,:])|{start})\s*([A-Za-z])\s*(?=[,.])"
 SPELLING_DELIMITERS = ",.!?;:"
 
 
+# Sigles que la synthèse vocale épelle alors qu'ils se disent comme un mot (« EHPAD » lu
+# « E, H, P, A, D » au lieu de « épade » : JB, 20/10). Clé : expression régulière ; valeur : écriture
+# phonétique. Ajouter ici les autres sigles mal prononcés après écoute.
+PRONUNCIATIONS_FR: dict[str, str] = {
+    r"\bEHPAD\b": "épade",
+}
+
+
+def pronounce_fr(text: str) -> str:
+    """Remplace les sigles mal prononcés par leur écriture phonétique, avant la synthèse vocale."""
+    import re
+
+    def fix(word: str):
+        def sub(m: re.Match) -> str:
+            before = m.string[: m.start()].rstrip()
+            sentence_start = not before or before[-1] in ".!?:"
+            return word[:1].upper() + word[1:] if sentence_start else word
+        return sub
+
+    for pattern, word in PRONUNCIATIONS_FR.items():
+        text = re.sub(pattern, fix(word), text or "", flags=re.IGNORECASE)
+    return text
+
+
 def spell_letters_fr(text: str, *, at_boundary: bool = True) -> str:
     """Remplace les lettres épelées (« i, point, m, a, r, i, n ») par leur nom en français.
 

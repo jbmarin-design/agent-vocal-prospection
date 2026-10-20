@@ -40,6 +40,7 @@ from .logic import (
     is_optout_request,
     looks_like_voicemail,
     pick_acknowledgement,
+    pronounce_fr,
     spell_letters_fr,
     strip_leading_interjection,
     voicemail_window_open,
@@ -178,7 +179,8 @@ class _BaseProspectAgent(Agent):
         """Avant la synthèse vocale :
         - si un acquiescement vient d'être dit, retire les interjections en tête de la réponse de
           Claude (« D'accord, donc… »), pour ne pas en entendre deux de suite ;
-        - écrit en français le nom des lettres épelées (sinon « I » est lu à l'anglaise).
+        - écrit en français le nom des lettres épelées (sinon « I » est lu à l'anglaise) ;
+        - écrit phonétiquement les sigles qui se disent comme un mot (« EHPAD » → « épade »).
         """
         return Agent.default.tts_node(self, self._epure(text), model_settings)
 
@@ -195,12 +197,12 @@ class _BaseProspectAgent(Agent):
             cut = max(buf.rfind(c) for c in SPELLING_DELIMITERS) + 1
             if cut:
                 piece, buf = buf[:cut], buf[cut:]
-                yield spell_letters_fr(piece, at_boundary=at_boundary)
+                yield pronounce_fr(spell_letters_fr(piece, at_boundary=at_boundary))
                 at_boundary = piece.rstrip()[-1:] in (",", ":")
         if buf:
             if not head_done:
                 buf = self._epure_head(buf)
-            yield spell_letters_fr(buf, at_boundary=at_boundary)
+            yield pronounce_fr(spell_letters_fr(buf, at_boundary=at_boundary))
 
     def _epure_head(self, head: str) -> str:
         ud = self._ud
