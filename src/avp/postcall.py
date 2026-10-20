@@ -829,6 +829,40 @@ def _load_record(row: dict[str, Any], settings: Settings) -> tuple[CallRecordFil
     return CallRecordFile.model_validate_json(path.read_text(encoding="utf-8")), path
 
 
+def _update_prospect_after_analysis(
+    prospect_id: int, record: CallRecordFile, campaign: Campaign, outcome_before: CallOutcome | None,
+    settings: Settings,
+) -> None:
+    """Reporte sur la fiche prospect ce que l'analyse a relevé (l'agent ne note plus rien en direct).
+
+    - décideur recueilli → contact de la fiche : la tentative suivante le demande par son nom ;
+    - issue corrigée (rappel, RDV, opposition…) → statut et date de la prochaine tentative recalculés
+      (sans compter de tentative supplémentaire : l'appel l'a déjà comptée).
+    """
+    from . import outcomes
+    from .agent.logic import contacts_note, pick_decision_contact
+
+    st, tz = record.state, _tz(settings)
+    try:
+        if st.contacts and not st.optout:
+            decider = pick_decision_contact(st.contacts)
+            db.enrich_prospect_contact(
+                prospect_id,
+                contact_name=decider.nom_complet if decider else "",
+                contact_role=decider.fonction if decider else "",
+                note=contacts_note(st.contacts, datetime.now(tz)),
+                db_path=settings.db_path,
+            )
+        if st.outcome is not None and st.outcome != outcome_before:
+            status, next_at = outcomes.next_step(
+                st.outcome, campaign, record.metadata.attempt, datetime.now(UTC), st.callback
+            )
+            db.release_prospect(prospect_id, status, next_at, outcome=st.outcome, increment_attempts=False,
+                                db_path=settings.db_path)
+    except Exception:  # noqa: BLE001 - la fiche se corrige au prochain appel ; l'analyse reste valable
+        log.exception("mise à jour du prospect %s après analyse impossible", prospect_id)
+
+
 async def process_call(
     call_id: str,
     *,
@@ -881,6 +915,8 @@ async def process_call(
         if record.state.optout and not optout_before and not record.metadata.test_mode:
             db.add_optout(record.metadata.prospect.phone, record.state.optout_reason, source="analyse",
                           db_path=db_path)
+        if added and row.get("prospect_id") and not record.metadata.test_mode:
+            _update_prospect_after_analysis(int(row["prospect_id"]), record, campaign, outcome_before, settings)
 
     # Synchronisation Axonaut
     sync: dict[str, Any]

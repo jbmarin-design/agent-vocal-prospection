@@ -542,3 +542,16 @@ def test_apply_analysis_rdv_prime_sur_refus_deduit():
     apply_analysis(st, analysis(rdv={"start": "2026-10-20T10:00:00+02:00", "email": "a.b@ehpad.fr"}),
                    campaign=campaign(), slots=[SLOT])
     assert st.outcome is CallOutcome.RDV
+
+
+async def test_process_call_met_a_jour_la_fiche_prospect(tmp_path: Path):
+    rec = record(CallOutcome.BARRAGE)
+    rec.metadata.prospect.contact_name = ""
+    st, call_id, pid = setup_db(tmp_path, rec)
+    data = {**GOOD, "contacts": [{"prenom": "Isabelle", "nom": "Marin", "fonction": "directrice",
+                                  "email": "i.marin@laposte.net"}],
+            "rappel": {"ask_for": "Mme Marin", "notes": "jeudi matin", "when": "2026-10-22T09:00:00+02:00"}}
+    await process_call(call_id, llm_client=FakeLLM(data), axonaut=FakeAxonaut(), settings=st)  # type: ignore[arg-type]
+    row = db.get_prospect_row(pid, st.db_path)
+    assert row and row["contact_name"] == "Isabelle Marin" and row["contact_role"] == "directrice"
+    assert row["status"] == "a_rappeler" and row["next_attempt_at"].startswith("2026-10-22")
