@@ -20,4 +20,5 @@ Une ligne par test. Indiquer la version de prompt (`avp prompt show <campagne>`)
 | | 5.4 | Occupé : non reproductible sur portable (rejet = messagerie) ; couvert par les tests automatiques | | | à faire depuis un fixe si besoin | |
 | | 5.4 | Issues réelles : rappel daté, opposition | | appels sur le portable de JB | à faire | |
 | | 5.5 | Concurrence réelle (2 appels simultanés max) | | au moins 2 numéros | à faire | |
-| | 5.6 | Worker arrêté (appels orphelins), redémarrage du démon pendant un appel | | | à faire | |
+| 20/10/2026 | 5.6 | Redémarrage du démon pendant un appel (88b5e3fc, barrage joué par JB) | — | `docker compose restart orchestrator` à 15:29:05 | arrêt et redémarrage propres en 2 s, appel poursuivi et terminé normalement, aucun double appel | oui |
+| | 5.6 | Worker arrêté (appels orphelins) | | | à faire | |
