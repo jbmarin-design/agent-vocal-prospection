@@ -20,6 +20,6 @@ Une ligne par test. Indiquer la version de prompt (`avp prompt show <campagne>`)
 | | 5.4 | Occupé : non reproductible sur portable (rejet = messagerie) ; couvert par les tests automatiques | | | à faire depuis un fixe si besoin | |
 | 20/10/2026 | 5.4 | Appel réel opposition (1c487f54) | — | « ne me rappelez plus » | excuses, raccrochage en 25 s, issue opposition, numéro en liste d'opposition, prospect exclu (numéro retiré ensuite pour la suite des tests) ; « ne me rappelez plus » ajouté à la détection sans Claude (4f82742) | oui |
 | | 5.4 | Rappel daté (« rappelez-moi demain à 11 h ») | | | à faire | |
-| | 5.5 | Concurrence réelle (2 appels simultanés max) | | au moins 2 numéros | à faire | |
+| | 5.5 | Concurrence réelle et **qualification des ressources de la VM** (demande de JB, 20/10) : lancer plusieurs appels simultanés (MAX_CONCURRENT_CALLS 2, puis plus), suivre CPU, mémoire, charge et latences (1er mot, fin de tour) pour voir si la machine sature ; canaux XiVO et trunk déjà dimensionnés | | plusieurs numéros | à faire (second temps) | |
 | 20/10/2026 | 5.6 | Redémarrage du démon pendant un appel (88b5e3fc, barrage joué par JB) | — | `docker compose restart orchestrator` à 15:29:05 | arrêt et redémarrage propres en 2 s, appel poursuivi et terminé normalement, aucun double appel | oui |
 | | 5.6 | Worker arrêté (appels orphelins) | | | à faire | |
