@@ -269,8 +269,8 @@ def strip_leading_interjection(text: str) -> str:
 # Nom des lettres en français, écrit pour la synthèse vocale : une lettre isolée (« I ») était lue à
 # l'anglaise quand Sarah épelait un email (test du 19/10).
 LETTER_NAMES_FR: dict[str, str] = {
-    # « e » écrit « euh » : « eu » s'entendait « u » au téléphone (JB, 20/10).
-    "a": "a", "b": "bé", "c": "cé", "d": "dé", "e": "euh", "f": "èf", "g": "gé", "h": "hache", "i": "i",
+    # « e » écrit « eux » : « eu » s'entendait « u », « euh » n'était pas prononcé (choix de JB, 20/10).
+    "a": "a", "b": "bé", "c": "cé", "d": "dé", "e": "eux", "f": "èf", "g": "gé", "h": "hache", "i": "i",
     "j": "ji", "k": "ka", "l": "èl", "m": "èm", "n": "èn", "o": "o", "p": "pé", "q": "ku", "r": "èr",
     "s": "èss", "t": "té", "u": "u", "v": "vé", "w": "double vé", "x": "iks", "y": "i grec", "z": "zèd",
 }

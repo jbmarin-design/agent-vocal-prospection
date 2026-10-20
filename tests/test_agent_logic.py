@@ -466,5 +466,5 @@ def test_is_self_identification(text, expected):
 
 def test_lettre_e_et_domaine_fr():
     assert logic.pronounce_fr(logic.spell_letters_fr("Je répète : h, a, m, e, l, i, n, arobase, orange, point, fr.")) == (
-        "Je répète : hache, a, èm, euh, èl, i, èn, arobase, orange, point, èf èr."
+        "Je répète : hache, a, èm, eux, èl, i, èn, arobase, orange, point, èf èr."
     )
