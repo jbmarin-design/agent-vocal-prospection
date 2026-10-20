@@ -269,7 +269,8 @@ def strip_leading_interjection(text: str) -> str:
 # Nom des lettres en français, écrit pour la synthèse vocale : une lettre isolée (« I ») était lue à
 # l'anglaise quand Sarah épelait un email (test du 19/10).
 LETTER_NAMES_FR: dict[str, str] = {
-    "a": "a", "b": "bé", "c": "cé", "d": "dé", "e": "eu", "f": "èf", "g": "gé", "h": "hache", "i": "i",
+    # « e » écrit « euh » : « eu » s'entendait « u » au téléphone (JB, 20/10).
+    "a": "a", "b": "bé", "c": "cé", "d": "dé", "e": "euh", "f": "èf", "g": "gé", "h": "hache", "i": "i",
     "j": "ji", "k": "ka", "l": "èl", "m": "èm", "n": "èn", "o": "o", "p": "pé", "q": "ku", "r": "èr",
     "s": "èss", "t": "té", "u": "u", "v": "vé", "w": "double vé", "x": "iks", "y": "i grec", "z": "zèd",
 }
@@ -282,6 +283,7 @@ SPELLING_DELIMITERS = ",.!?;:"
 # phonétique. Ajouter ici les autres sigles mal prononcés après écoute.
 PRONUNCIATIONS_FR: dict[str, str] = {
     r"\bEHPAD\b": "épade",
+    r"\bfr\b": "èf èr",  # domaine « .fr » : épelé à la française, comme on le dit au téléphone
 }
 
 

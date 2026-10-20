@@ -438,7 +438,7 @@ def test_asks_for_dictation(text, expected):
     [
         ("Dans beaucoup d'EHPAD, la téléphonie a évolué.", "Dans beaucoup d'épade, la téléphonie a évolué."),
         ("EHPAD et cliniques.", "Épade et cliniques."),
-        ("arobase, ehpad, point, fr.", "arobase, épade, point, fr."),
+        ("arobase, ehpad, point, fr.", "arobase, épade, point, èf èr."),
         ("e, h, p, a, d", "e, h, p, a, d"),  # épelé lettre par lettre : inchangé
     ],
 )
@@ -462,3 +462,9 @@ def test_pronounce_fr(text, expected):
 )
 def test_is_self_identification(text, expected):
     assert logic.is_self_identification(text) is expected
+
+
+def test_lettre_e_et_domaine_fr():
+    assert logic.pronounce_fr(logic.spell_letters_fr("Je répète : h, a, m, e, l, i, n, arobase, orange, point, fr.")) == (
+        "Je répète : hache, a, èm, euh, èl, i, èn, arobase, orange, point, èf èr."
+    )
