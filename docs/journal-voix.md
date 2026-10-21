@@ -54,6 +54,10 @@ Mis en place :
   `sonic-3.6` suivrait les mises à jour), `TTS_SPEED=0.95`, voix inchangée.
 - Prompt (`prompts/base.md`, « Comment vous parlez ») : écrire comme on parle, la voix suit la
   ponctuation. Accroche décideur (`DECIDER_HOOK_LINE`, `prompts/decideur.md`) réécrite dans ce style.
+- Déployé le 21/10 vers 9 h 30 : `.env` sauvegardé en `.env.bak-20261021-voix`, `AVP_VERSION=main`
+  (`1a57560`, au lieu de `v0.1.0`). Synthèse en flux vérifiée par le plugin LiveKit : 1er son 0,7 s.
+  Au passage : disque de la VM plein (cache de build Docker, 20 Go, inutile depuis la CI) → le worker
+  ne démarrait plus ; `docker builder prune -af` (40 % utilisés ensuite).
 - À écouter au prochain appel : l'accroche, les explications, la relecture d'email (les lettres
   épelées doivent rester nettes) et la latence du 1er son (sonic-3.6 à surveiller).
 
