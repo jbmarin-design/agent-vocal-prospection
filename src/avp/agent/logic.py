@@ -235,7 +235,10 @@ def ends_with_question(text: str) -> bool:
 
 # Petits mots neutres, sans jugement ni accord sur le fond : « Très bien », « Je vois », « Bien sûr »
 # ponctuaient mal les phrases et sonnaient faux quand la réponse ne s'y prêtait pas (JB, 19/10).
-ACKNOWLEDGEMENTS: tuple[str, ...] = ("Ok.", "Ah.", "D'accord.", "Ok, d'accord.")
+# 21/10 : « Ok, d'accord. » (point final) sonnait comme une phrase close, et la réponse de Claude,
+# ~1 s plus tard, comme un nouveau départ. « Alors… », en suspens, annonce la suite : choisi par JB
+# à l'écoute de variantes (journal-voix). Une seule formule : elle peut revenir d'un tour à l'autre.
+ACKNOWLEDGEMENTS: tuple[str, ...] = ("Alors…",)
 _QUESTION_STARTS = (
     "qui ", "quoi", "quel", "quelle", "comment", "pourquoi", "combien", "où ", "quand ", "est-ce",
     "c'est quoi", "c'est qui", "vous êtes", "vous appelez", "c'est à quel", "c'est pour",
@@ -263,8 +266,9 @@ def pick_acknowledgement(user_text: str, previous: str = "", *, choice=None) -> 
 
 
 _LEADING_INTERJECTION = (
-    r"^\s*(?:(?:d['’]accord|ok(?:ay)?|bien|très bien|tres bien|parfait|je vois|je comprends|entendu|ah|super)"
-    r"(?:\s*[,.!]+\s*|\s+(?=[a-zàâçéèêëîïôûùüÿ])))+"
+    r"^\s*(?:(?:d['’]accord|ok(?:ay)?|bien|très bien|tres bien|parfait|je vois|je comprends|entendu|ah|super"
+    r"|alors|merci(?: beaucoup| bien| à vous)?)"
+    r"(?:\s*[,.!…]+\s*|\s+(?=[a-zàâçéèêëîïôûùüÿ])))+"
 )
 INTERJECTION_BUFFER_CHARS = 30
 
@@ -273,12 +277,13 @@ def strip_leading_interjection(text: str) -> str:
     """Retire les interjections en tête de la réponse de Claude (« D'accord, donc… » → « Donc… »).
 
     Utilisé quand un acquiescement automatique vient d'être dit : sinon on entendait « Ok. D'accord,
-    donc… » (test du 19/10). La première lettre restante passe en majuscule.
+    donc… » (test du 19/10), ou « Ok, d'accord. Merci beaucoup ! Je répète… » (21/10). La première
+    lettre restante passe en majuscule. Une réponse faite seulement d'interjections reste entière.
     """
     import re
 
     rest = re.sub(_LEADING_INTERJECTION, "", text or "", count=1, flags=re.IGNORECASE)
-    if rest == text:
+    if rest == text or not rest.strip():
         return text
     return rest[:1].upper() + rest[1:]
 

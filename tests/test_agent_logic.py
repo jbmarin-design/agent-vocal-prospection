@@ -350,7 +350,8 @@ def test_acquiescement_varie():
     assert first == logic.ACKNOWLEDGEMENTS[0]
     second = logic.pick_acknowledgement("Elle sera là jeudi matin.", first, choice=lambda xs: xs[0])
     assert "Je vois." not in logic.ACKNOWLEDGEMENTS and "Très bien." not in logic.ACKNOWLEDGEMENTS
-    assert second and second != first
+    assert first == "Alors…"  # en suspens : la réponse de Claude sonne comme la suite (JB, 21/10)
+    assert second and (second != first or len(logic.ACKNOWLEDGEMENTS) == 1)
 
 
 @pytest.mark.parametrize(
@@ -364,6 +365,11 @@ def test_acquiescement_varie():
         ("Un système à 99, d'accord.", "Un système à 99, d'accord."),
         ("Bienvenue chez vous", "Bienvenue chez vous"),
         ("Super", "Super"),
+        ("Merci beaucoup ! Je répète l'adresse.", "Je répète l'adresse."),
+        ("Je comprends, merci. Pourriez-vous me donner son email ?", "Pourriez-vous me donner son email ?"),
+        ("Alors, je vous relis l'adresse.", "Je vous relis l'adresse."),
+        ("Merci.", "Merci."),
+        ("Merci à vous, bonne journée !", "Bonne journée !"),
     ],
 )
 def test_strip_leading_interjection(text, expected):
