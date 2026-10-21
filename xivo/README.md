@@ -22,13 +22,14 @@ Ce document décrit la configuration du XiVO pour l'agent vocal. Il suppose que 
 
 **Côté VM, quatre informations seulement :** `XIVO_SIP_ADDRESS` (IP du XiVO), `SIP_CALLER_NUMBER` (numéro présenté), `TRANSFER_TARGET` (`sip:<poste>@<IP XiVO>`), et les numéros à appeler, qui viennent des campagnes.
 
-**Traçabilité (facultatif)** : chaque INVITE porte l'en-tête `X-AVP-Call-ID: <identifiant d'appel>`, le même identifiant que dans `avp calls show` et dans Axonaut. Le sous-programme `extensions_avp_marquage.conf` (à copier dans `/etc/asterisk/extensions_extra.d/`, puis `dialplan reload`) le lit et l'écrit dans le CEL (événement utilisateur `AVP_CALL`) et dans la variable héritée `AVP_CALLID`. Le brancher en **sous-routine de prétraitement** `avp-marquage` de la règle d'appel sortant utilisée par le contexte `livekit`.
+**Traçabilité (facultatif)** : chaque INVITE porte l'en-tête `X-AVP-Call-ID: <identifiant d'appel>`, le même identifiant que dans `avp calls show` et dans Axonaut. Le sous-programme `extensions_avp_marquage.conf` (à copier dans `/etc/asterisk/extensions_extra.d/`, puis `dialplan reload`) le lit et l'écrit dans le CEL en donnée attachée XiVO CC (`ATTACHED_DATA`, `avp_call_id=<id>`), à côté de `recording=<id>` posé par l'enregistrement, et dans la variable héritée `AVP_CALLID`. Le brancher par une ligne `same = n,Gosub(avp-marquage,s,1)` en tête de `[xivocc-outcall-recording]` (`xivocc-recording.conf`). Sans l'en-tête, il ne fait rien.
 
-Retrouver un appel (base `asterisk` du XiVO) : le `linkedid` relie l'événement à l'enregistrement de l'appel.
+Retrouver un appel (base `asterisk` du XiVO) : le `linkedid` relie `avp_call_id` à `recording`.
 
 ```sql
-SELECT eventtime, linkedid, uniqueid, extra FROM cel
-WHERE eventtype = 'AVP_CALL' AND extra LIKE '%<id avp>%';
+SELECT r.eventtime, r.linkedid, r.extra FROM cel a JOIN cel r ON r.linkedid = a.linkedid
+WHERE a.eventtype = 'ATTACHED_DATA' AND a.extra LIKE '%avp_call_id=<id avp>%'
+  AND r.eventtype = 'ATTACHED_DATA' AND r.extra LIKE '%recording=%';
 ```
 
 Vérifier l'en-tête à l'arrivée : `sngrep` sur le XiVO (INVITE venant de la VM), ou `pjsip set logger on`.
