@@ -61,7 +61,7 @@ TEST_CAMPAIGN_PREFIXES: tuple[str, ...] = ("echo",)
 
 # Gabarits de la phrase d'ouverture (inclus dans la version des prompts).
 AGENT_NAME = "Sarah"
-OPENING_DISCLOSURE = f"Bonjour, ici {AGENT_NAME}, l'assistante virtuelle d'OpteoLink, les télécoms pro à Toulouse."
+OPENING_DISCLOSURE = f"Bonjour ! Ici {AGENT_NAME}, l'assistante virtuelle d'OpteoLink, les télécoms pro à Toulouse."
 # Seulement si le XiVO ne joue pas déjà son message d'annonce au décroché.
 OPENING_RECORDING = "Cet appel est enregistré."
 OPENING_ASK = "Pourrais-je parler {cible}, s'il vous plaît ?"
@@ -79,7 +79,7 @@ DECIDER_HOOK_LINE = (
     "établissement. Est-ce que vous auriez deux petites minutes ?"
 )
 # Au revoir FIXE, dit par le worker en fin d'appel (agents.finish_call), jamais par Claude.
-CLOSING_LINE = "Je vous souhaite une très bonne journée. Au revoir."
+CLOSING_LINE = "Merci à vous, et très bonne journée ! Au revoir."
 
 _JOURS = ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")
 _MOIS = (

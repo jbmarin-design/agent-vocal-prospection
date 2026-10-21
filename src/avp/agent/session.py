@@ -94,6 +94,8 @@ def build_tts(settings: Settings) -> Any:
         kwargs["api_key"] = settings.cartesia_api_key
     if settings.tts_speed is not None:
         kwargs["speed"] = settings.tts_speed
+    if settings.tts_emotion:
+        kwargs["emotion"] = settings.tts_emotion  # « content » : voix souriante, choisie par JB le 21/10
     return cartesia.TTS(**kwargs)
 
 

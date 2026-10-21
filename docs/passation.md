@@ -68,12 +68,12 @@ orchestrateur (avp run / avp call test) ──► LiveKit server + LiveKit SIP (
   - Preuves autorisées (sans chiffre ni nom) : « déjà réalisé pour des EHPAD comme le vôtre, excellents retours, vraies économies ».
 - **Conversation** : vive, 1–2 phrases par réplique, questions = guide et non questionnaire (2–3 max), RDV dès qu'il y a de l'intérêt.
 - **Barrage secrétariat** (cas le plus fréquent au premier appel, le nom du directeur est souvent inconnu) : ne jamais repartir les mains vides. Minimum : **nom de la personne référente, un moyen de la joindre, ses disponibilités** — demandés **en UNE seule question groupée**, puis on prend ce qui vient **sans relancer**.
-- **Voix** : Cartesia, voix FR féminine (« l'assistante »). `TTS_SPEED=0.9` (1.15 était beaucoup trop rapide).
+- **Voix** : Cartesia `sonic-3.6-2026-08-27`, voix Sarah, `TTS_SPEED=0.95`, `TTS_EMOTION=content` (voix souriante), choisis par JB à l'écoute le 21/10 (voir `docs/journal-voix.md`).
 
 ### Point de désaccord à connaître : l'annonce IA
 
 JB a demandé de **ne pas annoncer que c'est une IA** (il veut le révéler lui-même au rendez-vous comme démonstration de savoir-faire). Je ne l'ai **pas** fait : l'AI Act (art. 50, applicable depuis le 2 août 2026) et les conditions d'utilisation d'Anthropic interdisent un agent conçu pour faire croire à un humain, et `CLAUDE.md` impose de garder l'annonce. Compromis en place :
-- Phrase d'ouverture (depuis le 19/10) : « Bonjour, ici Sarah, l'assistante virtuelle d'OpteoLink, les télécoms pro à Toulouse. Pourrais-je parler… ». Le prénom Sarah est accepté (toujours accolé à « virtuelle »).
+- Phrase d'ouverture (depuis le 19/10) : « Bonjour ! Ici Sarah, l'assistante virtuelle d'OpteoLink, les télécoms pro à Toulouse. Pourrais-je parler… » (point d'exclamation depuis le 21/10, ton enjoué). Le prénom Sarah est accepté (toujours accolé à « virtuelle »).
 - L'enregistrement est annoncé par un **message pré-enregistré que le XiVO joue au décroché** (mis en place par JB le 19/10) ; l'agent n'en parle plus (`ANNONCE_ENREGISTREMENT_PAR_XIVO=true`). Si ce message est retiré du XiVO, passer ce réglage à `false`.
 - 19/10 : JB a aussi demandé de n'annoncer l'IA qu'au décideur (pas au standard). Refusé : l'AI Act vise toute personne qui échange avec l'IA, secrétaire comprise. Le décideur reçoit en revanche une présentation plus explicite (« une intelligence artificielle qui organise les rendez-vous de Jean-Baptiste Marin »).
 - Si on demande « vous êtes un robot ? » : réponse franche (« Oui, je suis une assistante virtuelle, une intelligence artificielle. J'organise les rendez-vous de Jean-Baptiste Marin. »).

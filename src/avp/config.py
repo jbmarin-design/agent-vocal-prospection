@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     tts_speed: float | None = Field(
         default=None, ge=0.6, le=2.0, description="Débit de la voix (Cartesia sonic-3) : 1.0 normal, 0.9 posé, >1.05 vite trop rapide"
     )
+    tts_emotion: str = Field(
+        default="",
+        description="Émotion de la voix (Cartesia sonic-3.x) : content, calm, neutral… ; vide = déduite du texte",
+    )
     elevenlabs_api_key: str = ""
     elevenlabs_model: str = "eleven_flash_v2_5"
     elevenlabs_voice_id: str = ""
