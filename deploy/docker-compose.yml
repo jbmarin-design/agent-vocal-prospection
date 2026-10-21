@@ -24,6 +24,10 @@ name: avp
 
 x-app-common: &app-common
   network_mode: host
+  # tini (init de Docker) en PID 1 : il transmet SIGTERM à Python. Sans lui, Python est PID 1 et le noyau
+  # ignore un SIGTERM reçu avant que LiveKit Agents n'installe son gestionnaire (3 premières secondes) :
+  # le worker était alors tué au bout du stop_grace_period de 7 min (constaté le 21/10).
+  init: true
   env_file: ../.env
   environment:
     # Chemins dans le conteneur (prioritaires sur .env)
