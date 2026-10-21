@@ -100,7 +100,8 @@ avp report weekly
 ## Arborescence
 
 ```
-deploy/      docker-compose, Dockerfile, gabarits LiveKit/SIP/pare-feu, install.sh, healthcheck.sh
+deploy/      docker-compose (+ override de build local), Dockerfile, gabarits LiveKit/SIP/pare-feu, install.sh, healthcheck.sh
+.github/     CI/CD : tests puis images ghcr.io (docs/exploitation.md § 13)
 xivo/        trunk et dialplan XiVO (chan_sip et PJSIP), enregistrement, transfert
 campaigns/   une campagne = un YAML (ehpad, cabinets-medicaux, echo)
 prompts/     base, accueil, decideur, repondeur, analyse post-appel

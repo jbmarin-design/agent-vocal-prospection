@@ -24,6 +24,8 @@ pip install -e ".[dev]"
 pytest -q && ruff check src tests
 ```
 
+La CI (`.github/workflows/ci.yml`) rejoue ces deux commandes à chaque push et ne publie les images ghcr.io que si elles passent. Déploiement : on ne construit plus sur la VM, on y choisit la version (`AVP_VERSION` dans `deploy/.env`) : voir `docs/exploitation.md` § 13.
+
 ## Phases d'installation et de validation
 
 | Phase | Objet | Modules principaux |

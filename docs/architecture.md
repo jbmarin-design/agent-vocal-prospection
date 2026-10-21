@@ -149,7 +149,8 @@ agent-vocal-prospection/
 ├── CLAUDE.md                 Consignes pour une session Claude qui reprend le code
 ├── pyproject.toml
 ├── .env.example
-├── deploy/                   docker-compose, configs LiveKit/SIP, Dockerfile, install.sh, nftables
+├── .github/workflows/ci.yml  CI/CD : pytest + ruff, puis images ghcr.io (agent-worker, orchestrator)
+├── deploy/                   docker-compose (+ docker-compose.build.yml), configs LiveKit/SIP, Dockerfile, install.sh, nftables
 ├── xivo/                     Trunk, contexte dialplan, enregistrement, procédure XiVO
 ├── campaigns/                Une campagne = un YAML (ehpad, cabinets-medicaux, echo de test)
 ├── prompts/                  base, accueil, decideur, repondeur, analyse post-appel

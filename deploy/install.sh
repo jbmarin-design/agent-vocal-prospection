@@ -198,7 +198,7 @@ chmod 755 /usr/local/bin/avp
 info "/usr/local/bin/avp → docker compose exec orchestrator avp …"
 
 # ---------------------------------------------------------------------------------------------
-log "9/9 Construction et démarrage des conteneurs"
+log "9/9 Images et démarrage des conteneurs"
 if [[ "${SKIP_START:-0}" == "1" ]]; then
   info "SKIP_START=1 : démarrage manuel : cd $INSTALL_DIR/deploy && docker compose pull && docker compose up -d"
   exit 0

@@ -145,7 +145,7 @@ systemctl enable nftables
 
 **Faire** (le fichier `deploy/.env` indique à Docker l'utilisateur propriétaire de `data/`) :
 ```bash
-printf 'AVP_UID=%s\nAVP_GID=%s\n' "$(id -u avp)" "$(id -g avp)" > /opt/agent-vocal-prospection/deploy/.env
+printf 'AVP_UID=%s\nAVP_GID=%s\nAVP_VERSION=main\n' "$(id -u avp)" "$(id -g avp)" > /opt/agent-vocal-prospection/deploy/.env
 chown -R avp:avp /opt/agent-vocal-prospection
 sudo -u avp docker compose up -d redis livekit sip
 sudo -u avp docker compose ps

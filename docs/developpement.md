@@ -83,14 +83,19 @@ sqlite3 data/avp.db "SELECT name, status, attempts, next_attempt_at FROM prospec
 2. Écrire ou adapter **d'abord** le test de la logique pure concernée.
 3. `pytest -q && ruff check src tests`.
 4. Tester en console, puis `avp call test` sur votre portable.
-5. Merge dans `main`, puis déploiement :
+5. Merge dans `main` (push) : la CI GitHub Actions (`.github/workflows/ci.yml`) rejoue `pytest` et `ruff`,
+   puis publie les images `ghcr.io/jbmarin-design/avp-agent-worker` et `avp-orchestrator` étiquetées `main`
+   et SHA court. Une version validée reçoit un tag `vX.Y.Z` (`git tag -a v0.2.0 -m … && git push origin v0.2.0`).
+6. Déploiement sur la VM, sans rien construire : `AVP_VERSION` dans `deploy/.env`, puis
 
 ```bash
 sudo -u avp git -C /opt/agent-vocal-prospection pull   # le dépôt appartient à l'utilisateur avp
-cd deploy && docker compose build && docker compose up -d
+cd /opt/agent-vocal-prospection/deploy && sudo -u avp docker compose pull agent-worker orchestrator && sudo -u avp docker compose up -d
 ```
 
-Les modifications de `prompts/` et `campaigns/` ne nécessitent **ni** rebuild **ni** redémarrage (montés en lecture seule, relus à chaque appel). Une modification de `.env` nécessite `docker compose up -d --force-recreate agent-worker orchestrator`.
+Procédure complète (versions, retour arrière, construction locale de secours) : `docs/exploitation.md` § 13.
+Le code Python est **dans l'image** : une modification de `src/` demande une nouvelle image (push, CI).
+Les modifications de `prompts/` et `campaigns/` ne nécessitent **ni** nouvelle image **ni** redémarrage (montés en lecture seule, relus à chaque appel). Une modification de `.env` nécessite `docker compose up -d --force-recreate agent-worker orchestrator`.
 
 ## 5. Travailler avec Claude sur ce dépôt
 

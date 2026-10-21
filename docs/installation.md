@@ -151,7 +151,7 @@ Compter 10 à 20 minutes : le build télécharge les modèles de détection de v
 6. rend `deploy/rendered/livekit.yaml`, `sip.yaml` et `avp.nft` (`deploy/render-config.sh`) ;
 7. installe le pare-feu : `/etc/nftables.d/avp.nft`, table `inet avp` dédiée. `/etc/nftables.conf` est remplacé par un simple `include` **sans `flush ruleset`**, pour ne pas effacer les règles de Docker (une sauvegarde est conservée) ;
 8. crée la commande hôte `/usr/local/bin/avp`, qui exécute la CLI dans le conteneur orchestrator ;
-9. construit les images, démarre redis, livekit et sip, **crée le trunk sortant** (`avp trunk create`) et écrit `SIP_OUTBOUND_TRUNK_ID` dans le `.env`, démarre le worker et l'orchestrateur, puis lance `healthcheck.sh`.
+9. tire les images de l'agent depuis ghcr.io (version `AVP_VERSION`, `main` par défaut, écrite dans `deploy/.env` ; `BUILD_LOCAL=1` pour les construire sur place), démarre redis, livekit et sip, **crée le trunk sortant** (`avp trunk create`) et écrit `SIP_OUTBOUND_TRUNK_ID` dans le `.env`, démarre le worker et l'orchestrateur, puis lance `healthcheck.sh`.
 
 **Vérification** : le script se termine par « Installation terminée ». `healthcheck.sh` ne montre aucune erreur, et `grep SIP_OUTBOUND_TRUNK_ID .env` affiche une valeur `ST_…`.
 
@@ -159,12 +159,16 @@ Le script est **rejouable** : en cas d'interruption, relance-le. Les secrets dé
 
 **Étape 4 : mises à jour ultérieures**
 
+Les images sont construites par la CI GitHub et publiées sur ghcr.io : rien n'est construit sur la VM.
+Choisir la version dans `deploy/.env` (`AVP_VERSION=vX.Y.Z`), puis :
+
 ```bash
 sudo -u avp git -C /opt/agent-vocal-prospection pull   # le dépôt appartient à l'utilisateur avp
-cd deploy && sudo -u avp docker compose build && sudo -u avp docker compose up -d
+cd /opt/agent-vocal-prospection/deploy && sudo -u avp docker compose pull agent-worker orchestrator && sudo -u avp docker compose up -d
 ```
 
-Une modification de `prompts/` ou `campaigns/` ne demande ni rebuild ni redémarrage. Une modification du `.env` demande `sudo -u avp docker compose up -d --force-recreate agent-worker orchestrator`.
+Retour arrière, versions et construction locale de secours : `docs/exploitation.md` § 13.
+Une modification de `prompts/` ou `campaigns/` ne demande ni nouvelle image ni redémarrage. Une modification du `.env` demande `sudo -u avp docker compose up -d --force-recreate agent-worker orchestrator`.
 
 ### 1.2 Variables d'infrastructure (`.env`)
 
@@ -205,7 +209,8 @@ sed -i "s/^LIVEKIT_API_KEY=.*/LIVEKIT_API_KEY=API$(openssl rand -hex 8)/" .env
 sed -i "s/^LIVEKIT_API_SECRET=.*/LIVEKIT_API_SECRET=$(openssl rand -hex 32)/" .env
 # éditer XIVO_SIP_ADDRESS, NODE_IP, SIP_CALLER_NUMBER, clés API
 cd deploy && ./render-config.sh --print
-docker compose up -d --build redis livekit sip
+printf 'AVP_UID=%s\nAVP_GID=%s\nAVP_VERSION=main\n' "$(id -u avp)" "$(id -g avp)" > .env   # deploy/.env
+docker compose pull && docker compose up -d redis livekit sip
 docker compose run --rm --no-deps orchestrator avp trunk create   # → ST_xxxx dans .env : SIP_OUTBOUND_TRUNK_ID
 docker compose up -d
 ```
@@ -305,4 +310,4 @@ Le transfert est désactivé tant que `TRANSFER_TARGET` est vide. S'il est activ
 
 - `docker compose logs agent-worker | grep -i "registered worker\|error"` ;
 - `LIVEKIT_API_KEY/SECRET` du `.env` différents de `rendered/livekit.yaml` : relancer `render-config.sh`, puis `docker compose up -d --force-recreate livekit sip agent-worker` ;
-- modèles absents (build interrompu) : `docker compose build --no-cache agent-worker`.
+- image incomplète ou douteuse : `docker compose pull agent-worker` (les modèles VAD et fin de tour sont dans l'image) ; en construction locale, `docker compose -f docker-compose.yml -f docker-compose.build.yml build --no-cache agent-worker`.
