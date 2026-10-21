@@ -99,8 +99,8 @@ async def test_decideur_qui_decroche_replique_fixe(tmp_path: Path):
         analysis={"score": "froid", "score_num": 10, "resume": "Refus."},
     ))
     sc = Scenario(id="t", titre="test", prospect="directeur")
-    res = await run_scenario(sc, load_campaign("ehpad", PROJECT_ROOT / "campaigns"), client=llm,
-                             settings=settings(tmp_path), slots=[SLOT], now=NOW)
-    from avp.prompts import DECIDER_HOOK_LINE
-    assert res.record.transcript[3].text == DECIDER_HOOK_LINE  # sans appel à Claude
+    campaign = load_campaign("ehpad", PROJECT_ROOT / "campaigns")
+    res = await run_scenario(sc, campaign, client=llm, settings=settings(tmp_path), slots=[SLOT], now=NOW)
+    from avp.prompts import decider_hook_line
+    assert res.record.transcript[3].text == decider_hook_line(campaign)  # sans appel à Claude
     assert sum(1 for c in llm.messages.calls if c.get("tools") and c["tools"][0]["name"] != ANALYSIS_TOOL_NAME) == 1

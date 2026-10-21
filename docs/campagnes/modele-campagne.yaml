@@ -28,6 +28,18 @@ offre:
   preuves:
     - "À REMPLIR : preuve validée par JB."
 
+# Tournures propres à l'offre (guide § 2). Sans ces champs : l'audit télécom gratuit sur place
+# des EHPAD. À renseigner si l'offre, le RDV (visio…) ou la cible diffèrent ; relire avec
+# `avp prompt show <id>`.
+# Dit au décideur : « Merci ! Alors, je vous appelle de la part de Jean-Baptiste Marin… <motif>.
+# Est-ce que vous auriez deux petites minutes ? » (sans point final).
+motif_appel: "au sujet des télécoms de votre établissement"
+proposition:
+  nom: "l'audit"               # avec son article : « une démonstration », « le rendez-vous en visio »
+  exemple: "Jean-Baptiste peut passer faire le point gratuitement, sur place : ça vous intéresserait ?"
+  detail: "visite, compte rendu, coûts et économies possibles"  # dit seulement si on le demande
+presentation_entreprise: "un acteur local basé à Toulouse, dix-huit ans d'expérience en téléphonie"
+
 # Dite après l'accord du décideur : un constat reconnaissable, puis UNE question ouverte.
 accroche: >-
   À REMPLIR : constat en une phrase. Comment ça se passe chez vous aujourd'hui ?

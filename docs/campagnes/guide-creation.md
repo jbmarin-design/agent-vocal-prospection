@@ -76,24 +76,33 @@ La campagne règle : la cible, l'offre, l'accroche, les questions, les objection
 score, les consignes propres au secteur, les plages d'appel, le nombre d'essais, les règles de
 RDV, le mapping Axonaut, les mots-clés de transcription.
 
-**Limites actuelles (à connaître avant de calibrer une cible très différente)** : les prompts
-communs ont été écrits pour la campagne EHPAD et contiennent encore des tournures qui supposent
-une offre d'**audit télécom gratuit sur place** :
+**Tournures propres à l'offre** : les prompts communs ont été écrits pour la campagne EHPAD
+(audit télécom gratuit sur place). Les passages qui en dépendent sont désormais des **champs de
+campagne**, dont les valeurs par défaut redonnent mot pour mot le texte EHPAD :
 
-- `decideur.md` : « je vous appelle … au sujet des télécoms de votre établissement », « Proposer
-  l'audit », « Jean-Baptiste peut passer faire le point gratuitement, sur place » ;
-- `decideur.md` : « {{entreprise}} se présente … un acteur local basé à Toulouse, dix-huit ans » ;
-- `base.md` § « OpteoLink en quelques mots » : arguments généraux (local, toutes les télécoms,
-  interlocuteur unique, santé) valables pour toutes les campagnes ;
-- la réplique fixe `DECIDER_HOOK_LINE` (`src/avp/prompts.py`) : « au sujet des télécoms de votre
-  établissement ».
+| Champ | Où il est dit | Défaut (EHPAD) |
+|---|---|---|
+| `motif_appel` | Réplique fixe quand le décideur décroche lui-même (`decider_hook_line`) et étape 1 de `decideur.md` : « Merci ! Alors, je vous appelle de la part de Jean-Baptiste Marin… **{motif_appel}**. Est-ce que vous auriez deux petites minutes ? » | « au sujet des télécoms de votre établissement » |
+| `proposition.nom` | `decideur.md` : « Proposer **l'audit** », « une question sur **l'audit** », « relie l'irritant **à l'audit** » (contraction à/au/aux automatique), « **l'audit** dira précisément ce qui peut être amélioré » | « l'audit » |
+| `proposition.exemple` | Exemple oral de la proposition (`decideur.md` étape 6, `base.md` exemples) : « C'est très fréquent. **{exemple}** » | « Jean-Baptiste peut passer faire le point gratuitement, sur place : ça vous intéresserait ? » |
+| `proposition.detail` | « Le détail, **{detail}**, seulement si on vous le demande » | « visite, compte rendu, coûts et économies possibles » |
+| `presentation_entreprise` | OpteoLink en quelques mots, si on le demande ou au moment de la proposition | « un acteur local basé à Toulouse, dix-huit ans d'expérience en téléphonie » |
 
-Pour une campagne proche (santé, mairies, cabinets : télécoms, audit ou RDV sur place), c'est
-compatible. Pour une offre différente (visio, démonstration, produit précis, cible non
-« établissement »), **le signaler à JB** : il faudra d'abord rendre ces passages paramétrables
-(champ de campagne) plutôt que de contredire le prompt commun dans `instructions_specifiques`.
-Les `instructions_specifiques` priment sur les consignes de rôle, mais un texte qui contredit le
-prompt commun donne un agent hésitant.
+Pour une campagne EHPAD ou proche (audit sur place), ne rien renseigner. Pour une offre différente
+(visio, démonstration, produit précis, cible qui n'est pas un « établissement »), renseigner ces
+champs **plutôt que** de contredire le prompt commun dans `instructions_specifiques` : un texte qui
+contredit le prompt commun donne un agent hésitant. Les écrire à l'oral : `motif_appel` complète
+« je vous appelle … » (sans point final), `proposition.nom` porte son article (« une démonstration »,
+« le rendez-vous en visio »), `proposition.exemple` finit par une question. Toujours relire le
+résultat avec `avp prompt show <id>`.
+
+Restent communs, à vérifier pour une cible très différente (le signaler à JB) :
+
+- `base.md` § « OpteoLink en quelques mots » et exemples de répliques : arguments généraux (local,
+  toutes les télécoms, interlocuteur unique, santé, appel malade) et l'exemple « On vous demande ce
+  qu'est l'audit » ;
+- `accueil.md` : motif donné au standard (« pour proposer un audit télécom gratuit… »), que Sarah
+  doit déjà adapter à la campagne.
 
 ## 3. Les champs d'une campagne, un par un
 
@@ -111,6 +120,9 @@ erreurs). Chaque champ ci-dessous : ce qu'il fait pendant l'appel → comment l'
 | `offre.resume` | Ce que Sarah *comprend* de l'offre (jamais récité) | Le constat du métier, puis l'offre, puis la démarche concrète. Texte de fond, 10-20 lignes |
 | `offre.points_forts` | Arguments à piocher | Une phrase par bénéfice **pour le client**, pas pour OpteoLink |
 | `offre.preuves` | Faits citables tels quels | **Uniquement validés par JB** : ni chiffre, ni nom de client inventé |
+| `motif_appel` | Suite de « je vous appelle de la part de Jean-Baptiste Marin… », dite au décideur (réplique fixe) | Défaut EHPAD ; sinon une courte fin de phrase orale, sans point : « au sujet de la téléphonie de votre cabinet » (§ 2) |
+| `proposition` | Ce que Sarah propose (`nom`), l'exemple oral (`exemple`), le détail donné sur demande (`detail`) | Défaut EHPAD (audit sur place) ; sinon les trois sous-champs (§ 2) |
+| `presentation_entreprise` | OpteoLink en quelques mots, si on le demande | Défaut : acteur local, Toulouse, dix-huit ans ; à changer seulement si la cible l'exige |
 | `accroche` | Dite après l'accord du décideur | 1 ou 2 phrases : un constat que le prospect reconnaît, puis **une question ouverte** |
 | `qualification` | Guide de découverte (2-3 posées au plus) | 5 à 8 questions ; `id` en snake_case ; `but` = ce qu'on veut savoir ; `obligatoire: true` pour 2 ou 3 prioritaires |
 | `objections` | Réponses conseillées | 8 à 12 objections réelles du métier ; réponse en 1-2 phrases orales qui ramènent à l'objectif |
@@ -219,7 +231,7 @@ Consigner les résultats dans `docs/journal-tests.md` ; les remarques sur la voi
 - [ ] 5 à 8 questions de qualification, 2 ou 3 prioritaires, `id` uniques
 - [ ] 8 à 12 objections dont les incontournables (§ 4)
 - [ ] `instructions_specifiques` sans contradiction avec `base.md` ni avec les règles
-- [ ] Compatibilité avec les tournures communes « audit / sur place / télécoms » vérifiée (§ 2)
+- [ ] `motif_appel`, `proposition`, `presentation_entreprise` renseignés si l'offre n'est pas un audit sur place (§ 2), relus dans `avp prompt show`
 - [ ] Plages d'appel et de RDV adaptées au métier ; `actif: false`
 - [ ] Étapes Axonaut identiques à celles du pipeline de JB (ou à créer, signalé)
 - [ ] `mots_cles_stt` : opérateurs, produits, sigles, villes du secteur

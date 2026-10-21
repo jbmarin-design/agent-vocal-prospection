@@ -25,7 +25,7 @@ L'essentiel du comportement de l'agent ne se trouve pas dans le code Python : il
 
 Pour voir le résultat exact : `avp prompt show ehpad` (rôle `appel` par défaut : agent unique, `accueil.md` puis `decideur.md`).
 
-Variables utilisables dans les `.md` : `{{entreprise}}`, `{{humain}}`, `{{humain_prenom}}`, `{{campagne}}`, `{{objectif}}`, `{{interlocuteur_cible}}`, `{{alternatives}}`, `{{prospect_nom}}`, `{{prospect_ville}}`, `{{contact_nom}}`, `{{contact_fonction}}`, `{{date_heure}}`, `{{tentative}}`, `{{duree_rdv}}`, `{{mode_rdv}}`, `{{phrase_ouverture}}`.
+Variables utilisables dans les `.md` : `{{entreprise}}`, `{{humain}}`, `{{humain_prenom}}`, `{{campagne}}`, `{{objectif}}`, `{{interlocuteur_cible}}`, `{{alternatives}}`, `{{prospect_nom}}`, `{{prospect_ville}}`, `{{contact_nom}}`, `{{contact_fonction}}`, `{{date_heure}}`, `{{tentative}}`, `{{duree_rdv}}`, `{{mode_rdv}}`, `{{phrase_ouverture}}`, et les tournures propres à l'offre, tirées de la campagne : `{{motif_appel}}`, `{{proposition}}`, `{{a_la_proposition}}` (« à l'audit », « au rendez-vous »), `{{proposition_exemple}}`, `{{proposition_detail}}`, `{{presentation_entreprise}}`.
 
 ## Écrire pour la voix
 

@@ -125,3 +125,39 @@ def test_fiche_email_deja_connu(ehpad, prospect):
     p = prospect.model_copy(update={"notes": "Contacts recueillis le 20/10/2026 : Isabelle Marin (directrice) i.marin@laposte.net"})
     text = prompts.prospect_section(p)
     assert "Email déjà connu : i.marin@laposte.net" in text and "Ne le redemandez pas" in text
+
+
+def test_replique_decideur_ehpad_inchangee(ehpad):
+    # Texte validé au téléphone (21/10) : les valeurs par défaut de la campagne le redonnent à l'identique.
+    assert prompts.decider_hook_line(ehpad) == (
+        "Merci ! Alors, je vous appelle de la part de Jean-Baptiste Marin… au sujet des télécoms de votre "
+        "établissement. Est-ce que vous auriez deux petites minutes ?"
+    )
+
+
+def test_tournures_de_l_offre_parametrables(ehpad, prospect):
+    from avp.models import Proposition
+
+    camp = ehpad.model_copy(update={
+        "motif_appel": "au sujet de la téléphonie de votre cabinet.",
+        "proposition": Proposition(
+            nom="le rendez-vous en visio",
+            exemple="Jean-Baptiste peut vous montrer ça en visio, en vingt minutes : ça vous dirait ?",
+            detail="durée, lien de connexion",
+        ),
+        "presentation_entreprise": "un intégrateur télécom toulousain",
+    })
+    assert prompts.decider_hook_line(camp) == (
+        "Merci ! Alors, je vous appelle de la part de Jean-Baptiste Marin… au sujet de la téléphonie de "
+        "votre cabinet. Est-ce que vous auriez deux petites minutes ?"
+    )
+    text = prompts.build_instructions("appel", camp, prospect, now=NOW, prompts_dir=PROMPTS_DIR,
+                                      transfer_available=False)
+    for phrase in ("Je vous appelle au sujet de la téléphonie de votre cabinet.",
+                   "Proposer le rendez-vous en visio : une phrase courte qui relie l'irritant au rendez-vous en visio",
+                   "« C'est très fréquent. Jean-Baptiste peut vous montrer ça en visio, en vingt minutes : ça vous dirait ? »",
+                   "Le détail, durée, lien de connexion, seulement",
+                   "proposer le rendez-vous en visio : un intégrateur télécom toulousain."):
+        assert phrase in text
+    for old in ("sur place : ça vous intéresserait", "télécoms de votre établissement", "Proposer l'audit"):
+        assert old not in text

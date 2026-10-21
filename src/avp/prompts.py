@@ -74,9 +74,10 @@ LENGTH_REMINDER = (
 # Claude, dont le 1er mot pouvait tarder 3,5 s à ce moment-là (20/10).
 # Écrite comme on la dit (« Alors, », « … », question orale) : la voix (sonic-3.6) s'appuie sur la
 # ponctuation pour l'intonation ; l'ancienne version, plus sèche, sonnait monotone (JB, 21/10).
+# Le motif vient de la campagne (`motif_appel`) : voir `decider_hook_line`.
 DECIDER_HOOK_LINE = (
-    f"Merci ! Alors, je vous appelle de la part de {HUMAN_NAME}… au sujet des télécoms de votre "
-    "établissement. Est-ce que vous auriez deux petites minutes ?"
+    f"Merci ! Alors, je vous appelle de la part de {HUMAN_NAME}… {{motif}}. "
+    "Est-ce que vous auriez deux petites minutes ?"
 )
 # Au revoir FIXE, dit par le worker en fin d'appel (agents.finish_call), jamais par Claude.
 CLOSING_LINE = "Merci à vous, et très bonne journée ! Au revoir."
@@ -183,6 +184,11 @@ def opening_line(campaign: Campaign, prospect: Prospect, *, announce_recording: 
     return f"{head} {OPENING_ASK.format(cible=_contract_a(cible))}"
 
 
+def decider_hook_line(campaign: Campaign) -> str:
+    """Réplique FIXE dite quand le décideur a décroché lui-même, avec le motif de la campagne."""
+    return DECIDER_HOOK_LINE.format(motif=campaign.motif_appel.strip().rstrip("."))
+
+
 def template_variables(
     campaign: Campaign,
     prospect: Prospect,
@@ -208,6 +214,12 @@ def template_variables(
         "tentative": str(attempt),
         "duree_rdv": str(campaign.rdv.duree_min),
         "mode_rdv": campaign.rdv.mode,
+        "motif_appel": campaign.motif_appel.strip().rstrip("."),
+        "proposition": campaign.proposition.nom.strip(),
+        "a_la_proposition": _contract_a(campaign.proposition.nom),
+        "proposition_exemple": campaign.proposition.exemple.strip(),
+        "proposition_detail": campaign.proposition.detail.strip(),
+        "presentation_entreprise": campaign.presentation_entreprise.strip().rstrip("."),
         "phrase_ouverture": opening_line(campaign, prospect),
     }
 

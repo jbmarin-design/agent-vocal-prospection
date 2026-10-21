@@ -49,7 +49,7 @@ from .models import (
     TranscriptTurn,
 )
 from .postcall import analyze_call, apply_analysis
-from .prompts import CLOSING_LINE, DECIDER_HOOK_LINE, build_instructions, opening_line
+from .prompts import CLOSING_LINE, build_instructions, decider_hook_line, opening_line
 
 HANGUP_MARK = "[RACCROCHE]"
 PICKUP_LINE = "Allô ?"
@@ -293,9 +293,10 @@ async def run_scenario(
                     and len(transcript) <= 4):
                 # même réplique fixe qu'en appel réel (AgentAppel)
                 state.decision_maker_reached = True
-                say("agent", DECIDER_HOOK_LINE)
-                agent_msgs.append({"role": "assistant", "content": DECIDER_HOOK_LINE})
-                prospect_msgs.append({"role": "user", "content": DECIDER_HOOK_LINE})
+                hook = decider_hook_line(campaign)
+                say("agent", hook)
+                agent_msgs.append({"role": "assistant", "content": hook})
+                prospect_msgs.append({"role": "user", "content": hook})
                 continue
             # --- Sarah répond (avec un éventuel aller-retour si un outil renvoie une erreur)
             system = [{"type": "text", "text": instructions, "cache_control": {"type": "ephemeral"}}]

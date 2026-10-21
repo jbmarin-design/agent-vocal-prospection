@@ -26,7 +26,7 @@ from livekit.agents import Agent, RunContext, StopResponse, ToolError, function_
 
 from ..livekit_admin import participant_identity_for
 from ..models import CallOutcome
-from ..prompts import CLOSING_LINE, DECIDER_HOOK_LINE, build_instructions
+from ..prompts import CLOSING_LINE, build_instructions, decider_hook_line
 from .logic import (
     COMPLAINT_HINT,
     END_OUTCOMES,
@@ -171,7 +171,7 @@ class _BaseProspectAgent(Agent):
                 and ud.user_turns <= 2):
             # Le décideur a décroché : réplique fixe immédiate, Claude prend la suite à la réponse.
             ud.state.decision_maker_reached = True
-            self.session.say(DECIDER_HOOK_LINE, allow_interruptions=True)
+            self.session.say(decider_hook_line(ud.campaign), allow_interruptions=True)
             logger.info("décideur en ligne dès le décroché : réplique fixe")
             raise StopResponse()
         if not ud.settings.acquiescements or ud.hangup_requested or ud.closing:

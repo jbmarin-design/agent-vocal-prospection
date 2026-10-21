@@ -33,8 +33,10 @@ une fois (JB peut répondre en vrac, à l'oral) ; ce qui reste sans réponse est
     sans engagement ? [`offre`, `objectif`]
 11. Quel rendez-vous : sur place, visio, téléphone ? Durée ? Quels jours et heures pour vous,
     lesquels sous réserve ? Délai minimal et horizon ? [`rdv`]
-12. Si ce n'est ni un audit ni une visite sur place : le dire, car les prompts communs supposent
-    aujourd'hui « audit télécom, sur place » (voir le guide, § 2).
+12. Comment Sarah le dit-elle ? « Je vous appelle de la part de Jean-Baptiste… *au sujet de quoi* ? »,
+    puis la phrase qui propose (« Jean-Baptiste peut passer faire le point gratuitement, sur place :
+    ça vous intéresserait ? ») et ce qu'on détaille si on le demande. Par défaut : l'audit sur place
+    des EHPAD. [`motif_appel`, `proposition`, `presentation_entreprise` ; guide § 2]
 
 ## 4. Les arguments et les preuves
 

@@ -11,9 +11,11 @@ description: Créer, calibrer ou retoucher une campagne de l'agent vocal de pros
 2. **Brief** : poser à JB, **en une seule fois**, les questions de `docs/campagnes/fiche-brief.md`
    auxquelles sa demande ne répond pas encore. Il dicte : accepter des réponses en vrac. Ne rien
    inventer (preuve, chiffre, nom de client, étape Axonaut) : marquer « à confirmer ».
-3. **Vérifier la compatibilité** avec les prompts communs (guide § 2 : tournures « audit,
-   sur place, télécoms de votre établissement »). Si l'offre ou le RDV diffèrent, le dire à JB
-   avant d'écrire, et proposer de rendre ces passages paramétrables plutôt que de les contredire.
+3. **Adapter les tournures propres à l'offre** (guide § 2) : par défaut, les prompts communs
+   parlent de l'audit télécom gratuit sur place des EHPAD. Si l'offre, le RDV (visio…) ou la cible
+   diffèrent, renseigner `motif_appel`, `proposition` (`nom`, `exemple`, `detail`) et au besoin
+   `presentation_entreprise`, plutôt que de contredire le prompt commun dans
+   `instructions_specifiques`. Signaler à JB ce qui reste commun (`base.md`, motif au standard).
 4. **Écrire** `campaigns/<id>.yaml` depuis `docs/campagnes/modele-campagne.yaml` (`actif: false`)
    et `simulations/<id>.yaml` depuis `docs/campagnes/modele-simulations.yaml` (10 à 20 scénarios).
    Tout ce que Sarah dira s'écrit à l'oral (30 mots, vouvoiement, ton enjoué, nombres en lettres).

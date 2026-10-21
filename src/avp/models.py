@@ -123,6 +123,17 @@ class Offer(BaseModel):
     preuves: list[str] = Field(default_factory=list)
 
 
+class Proposition(BaseModel):
+    """Ce que Sarah propose au décideur (étape « Objectif » de prompts/decideur.md).
+
+    Valeurs par défaut : l'audit télécom gratuit sur place de la campagne EHPAD.
+    """
+
+    nom: str = "l'audit"  # groupe nominal avec son article, tel qu'il se dit : « une démonstration »
+    exemple: str = "Jean-Baptiste peut passer faire le point gratuitement, sur place : ça vous intéresserait ?"
+    detail: str = "visite, compte rendu, coûts et économies possibles"  # seulement si on le demande
+
+
 class VoicemailPolicy(BaseModel):
     action: Literal["message", "raccrocher"] = "raccrocher"
     message: str = ""
@@ -188,6 +199,11 @@ class Campaign(BaseModel):
     cible: Target
     offre: Offer
     accroche: str
+    # Tournures du prompt commun propres à l'offre ; défauts = campagne EHPAD
+    # (docs/campagnes/guide-creation.md § 2).
+    motif_appel: str = "au sujet des télécoms de votre établissement"  # « je vous appelle … »
+    proposition: Proposition = Field(default_factory=Proposition)
+    presentation_entreprise: str = "un acteur local basé à Toulouse, dix-huit ans d'expérience en téléphonie"
     qualification: list[QualificationQuestion] = Field(default_factory=list)
     objections: list[Objection] = Field(default_factory=list)
     scoring: dict[Score, str] = Field(default_factory=dict)
