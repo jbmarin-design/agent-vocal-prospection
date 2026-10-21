@@ -11,7 +11,7 @@ Outil : des échantillons de la voix de Sarah peuvent être générés sur la VM
 
 | Date | Appel | Constat | Souhait |
 |---|---|---|---|
-| — | — | — | — |
+| 21/10 | Appel 35ff905c (rappel, voix sonic-3.6 « content ») | Ton « beaucoup mieux » (JB). Mais le petit mot (« Ok, d'accord. ») est une phrase à part, suivie ~1 s plus tard d'un 2e remerciement de Claude (« Merci beaucoup ! », « Je comprends, merci. ») : ça ne s'enchaîne pas | Pas de doublon après le petit mot ; petit mot « en suspens » (variantes envoyées à JB : « D'accord… », « Alors… », « Oui, oui… ») |
 
 ## Déjà corrigé
 
