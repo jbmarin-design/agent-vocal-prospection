@@ -61,5 +61,10 @@ Mis en place :
 - À écouter au prochain appel : l'accroche, les explications, la relecture d'email (les lettres
   épelées doivent rester nettes) et la latence du 1er son (sonic-3.6 à surveiller).
 
+Complément du 21/10 (JB) : « une voix qui chante », on doit entendre le sourire au téléphone →
+émotion `content` gardée finalement (`TTS_EMOTION=content`, nouveau réglage, `21945f2`), ton du prompt
+« enjoué et avenant », exclamations permises (une par réplique, jamais face à un mécontentement),
+ouverture « Bonjour ! Ici Sarah… », au revoir « Merci à vous, et très bonne journée ! ».
+
 Le texte écrit compte autant que la voix : sans ponctuation orale, `sonic-3.6` reste plat.
 
