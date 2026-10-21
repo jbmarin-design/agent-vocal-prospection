@@ -22,8 +22,16 @@ Ce document décrit la configuration du XiVO pour l'agent vocal. Il suppose que 
 
 **Côté VM, quatre informations seulement :** `XIVO_SIP_ADDRESS` (IP du XiVO), `SIP_CALLER_NUMBER` (numéro présenté), `TRANSFER_TARGET` (`sip:<poste>@<IP XiVO>`), et les numéros à appeler, qui viennent des campagnes.
 
-**Traçabilité (facultatif)** : chaque INVITE porte l'en-tête `X-AVP-Call-ID: <identifiant d'appel>`. Pour retrouver un appel du XiVO dans `avp calls show`, il suffit de recopier cet en-tête dans le CDR, par exemple avec un sous-programme de pré-traitement sur le contexte du trunk :
-`Set(CDR(userfield)=avp:${PJSIP_HEADER(read,X-AVP-Call-ID)})`
+**Traçabilité (facultatif)** : chaque INVITE porte l'en-tête `X-AVP-Call-ID: <identifiant d'appel>`, le même identifiant que dans `avp calls show` et dans Axonaut. Le sous-programme `extensions_avp_marquage.conf` (à copier dans `/etc/asterisk/extensions_extra.d/`, puis `dialplan reload`) le lit et l'écrit dans le CEL (événement utilisateur `AVP_CALL`), dans le CDR (`userfield=avp:<id>`) et dans la variable héritée `AVP_CALLID`. Le brancher en **sous-routine de prétraitement** `avp-marquage` de la règle d'appel sortant utilisée par le contexte `livekit`.
+
+Retrouver un appel (base `asterisk` du XiVO) : le `linkedid` relie l'événement à l'enregistrement de l'appel.
+
+```sql
+SELECT eventtime, linkedid, uniqueid, extra FROM cel
+WHERE eventtype = 'AVP_CALL' AND extra LIKE '%<id avp>%';
+```
+
+Vérifier l'en-tête à l'arrivée : `sngrep` sur le XiVO (INVITE venant de la VM), ou `pjsip set logger on`.
 
 > Les sections 1 et 3 décrivent une **option avancée** : un dialplan dédié (`extensions_livekit.conf`) qui force le numéro présenté, filtre les destinations et enregistre avec MixMonitor. Elle n'est utile que si l'on ne veut pas passer par les règles d'appels sortants du XiVO. En mode natif, on ne fait que le § 2.3 (trunk PJSIP), avec le contexte choisi ci-dessus à la place de `from-livekit`.
 
