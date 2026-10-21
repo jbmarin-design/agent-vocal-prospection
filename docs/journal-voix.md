@@ -11,7 +11,7 @@ Outil : des échantillons de la voix de Sarah peuvent être générés sur la VM
 
 | Date | Appel | Constat | Souhait |
 |---|---|---|---|
-| 20/10 | — | Voix jugée encore un peu robotique dans l'ensemble | Comparer d'autres voix Cartesia / ElevenLabs et la vitesse (`TTS_SPEED`) |
+| — | — | — | — |
 
 ## Déjà corrigé
 
@@ -25,9 +25,37 @@ Outil : des échantillons de la voix de Sarah peuvent être générés sur la VM
 | 20/10 | Nom connu redemandé | Seul l'email est demandé quand le nom est connu (52df178) |
 | 20/10 | Domaine « lesbranches » dit « les, branchés » | Domaine propre à un établissement épelé (52df178) |
 | 20/10 | « Hamelin » / jl.amelin@ validé | Garde-fou nom/email : RDV « à confirmer » + tâche (52df178) |
+| 20/10 | Voix robotique : intonation monotone, pas d'accent ni de rythme dans la phrase (JB) | Choix à l'écoute le 21/10 (voir « Choix de la voix ») : modèle `sonic-3.6-2026-08-27`, voix Sarah, `TTS_SPEED=0.95`, écriture orale dans le prompt |
 
 ## Échantillons
 
 Script de synthèse avec la voix et les réglages de Sarah (Cartesia, depuis le conteneur
 `agent-worker`) ; les fichiers sont écrits dans `data/voix/` sur la VM. Une écriture testée et
 retenue s'ajoute à `LETTER_NAMES_FR` ou `PRONUNCIATIONS_FR` dans `src/avp/agent/logic.py`.
+
+## Choix de la voix (21/10/2026)
+
+Deux séries d'échantillons de 3 répliques (accroche décideur, explication, relecture d'email), en
+qualité téléphone (8 kHz), écoutées par JB :
+
+1. Dix voix françaises féminines Cartesia en `sonic-3` (Sarah actuelle à 0,9 et 1,0, Sarah + émotion
+   « content », Pauline, Mika, Eloise, Emmanuelle, Isabelle, Sophie, Léonie). Finalistes : **Sarah**
+   (`90358bc7-3328-4b93-a942-d0447d7d4b5c`) et **Eloise** (`6c64b57a-bc65-48e4-bff4-12dbe85606cd`).
+   Constat de JB : ce qui trahit l'IA n'est pas le timbre mais l'intonation monotone (pas d'accent sur
+   les mots, pas de variation de rythme).
+2. Sarah et Eloise en `sonic-3` puis `sonic-3.6` (modèle d'août 2026, qui fait varier rythme et
+   intonation selon le sens), à 0,9 / 1,0, puis à 0,95 avec un texte écrit « à l'oral » (« Merci !
+   Alors, … », points de suspension, « Est-ce que vous auriez… ? »), avec ou sans émotion « content ».
+   Choix de JB : **4 et 5** (Sarah, `sonic-3.6`, 0,95, texte oral) ; retenu le 4, sans émotion
+   (différence faible, pas de code en plus ; l'émotion reste possible, le plugin LiveKit l'accepte).
+
+Mis en place :
+- `.env` de la VM : `CARTESIA_MODEL=sonic-3.6-2026-08-27` (version datée, qui ne bouge plus ; l'alias
+  `sonic-3.6` suivrait les mises à jour), `TTS_SPEED=0.95`, voix inchangée.
+- Prompt (`prompts/base.md`, « Comment vous parlez ») : écrire comme on parle, la voix suit la
+  ponctuation. Accroche décideur (`DECIDER_HOOK_LINE`, `prompts/decideur.md`) réécrite dans ce style.
+- À écouter au prochain appel : l'accroche, les explications, la relecture d'email (les lettres
+  épelées doivent rester nettes) et la latence du 1er son (sonic-3.6 à surveiller).
+
+Le texte écrit compte autant que la voix : sans ponctuation orale, `sonic-3.6` reste plat.
+

@@ -72,9 +72,11 @@ LENGTH_REMINDER = (
 )
 # Réplique FIXE quand le décideur a décroché lui-même (« C'est moi-même ») : dite sans attendre
 # Claude, dont le 1er mot pouvait tarder 3,5 s à ce moment-là (20/10).
+# Écrite comme on la dit (« Alors, », « … », question orale) : la voix (sonic-3.6) s'appuie sur la
+# ponctuation pour l'intonation ; l'ancienne version, plus sèche, sonnait monotone (JB, 21/10).
 DECIDER_HOOK_LINE = (
-    f"Merci. Je vous appelle de la part de {HUMAN_NAME}, au sujet des télécoms de votre établissement : "
-    "vous avez deux minutes ?"
+    f"Merci ! Alors, je vous appelle de la part de {HUMAN_NAME}… au sujet des télécoms de votre "
+    "établissement. Est-ce que vous auriez deux petites minutes ?"
 )
 # Au revoir FIXE, dit par le worker en fin d'appel (agents.finish_call), jamais par Claude.
 CLOSING_LINE = "Je vous souhaite une très bonne journée. Au revoir."
