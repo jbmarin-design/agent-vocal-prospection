@@ -11,7 +11,7 @@ Outil : des échantillons de la voix de Sarah peuvent être générés sur la VM
 
 | Date | Appel | Constat | Souhait |
 |---|---|---|---|
-| 21/10 | Appel 35ff905c (rappel, voix sonic-3.6 « content ») | Ton « beaucoup mieux » (JB). Mais le petit mot (« Ok, d'accord. ») est une phrase à part, suivie ~1 s plus tard d'un 2e remerciement de Claude (« Merci beaucoup ! », « Je comprends, merci. ») : ça ne s'enchaîne pas | Pas de doublon après le petit mot ; petit mot « en suspens » (variantes envoyées à JB : « D'accord… », « Alors… », « Oui, oui… ») |
+| — | — | — | — |
 
 ## Déjà corrigé
 
@@ -26,6 +26,7 @@ Outil : des échantillons de la voix de Sarah peuvent être générés sur la VM
 | 20/10 | Domaine « lesbranches » dit « les, branchés » | Domaine propre à un établissement épelé (52df178) |
 | 20/10 | « Hamelin » / jl.amelin@ validé | Garde-fou nom/email : RDV « à confirmer » + tâche (52df178) |
 | 20/10 | Voix robotique : intonation monotone, pas d'accent ni de rythme dans la phrase (JB) | Choix à l'écoute le 21/10 (voir « Choix de la voix ») : modèle `sonic-3.6-2026-08-27`, voix Sarah, `TTS_SPEED=0.95`, écriture orale dans le prompt |
+| 21/10 | Petit mot « Ok, d'accord. » = phrase close, puis 2e remerciement de Claude ~1 s après (appel 35ff905c) | « Alors… » en suspens (variante 4 choisie par JB), « merci… »/« alors » retirés en tête de réponse après le petit mot, consigne du prompt (`b8c9d55`) |
 
 ## Échantillons
 
