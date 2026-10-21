@@ -34,6 +34,8 @@ WHERE a.eventtype = 'ATTACHED_DATA' AND a.extra LIKE '%avp_call_id=<id avp>%'
 
 Vérifier l'en-tête à l'arrivée : `sngrep` sur le XiVO (INVITE venant de la VM), ou `pjsip set logger on`.
 
+**Enregistrement XiVO CC des appels de l'agent** (en place chez OpteoLink depuis le 21/10/2026) : le même fichier définit `[xivo-subrgbl-outcall]`, la sous-routine globale sortante documentée par XiVO CC, qui appelle `xivocc-outcall-recording` pour le seul contexte `livekit`. Ne pas mettre en plus `xivocc-outcall-recording` en prétraitement de la règle sortante, sinon deux `Monitor` démarrent. **Prérequis :** `STOP_RECORDING_UPON_EXTERNAL_XFER=false` sur le `xuc` (`docker-xivocc.yml` + `custom.env`, puis `xivocc-dcomp up -d`). Sans ce réglage, le xuc voit l'appel comme externe ↔ externe (trunk LiveKit ↔ trunk opérateur) et coupe l'enregistrement dans la seconde (`TrunkDeviceTracker - Stop recording` dans `xuc.log`, « Mixing is empty » dans `/var/log/xivocc-recording/replication.log`). Ce réglage est global. Dans l'interface d'enregistrement, chercher un appel avec la métadonnée `avp_call_id`.
+
 > Les sections 1 et 3 décrivent une **option avancée** : un dialplan dédié (`extensions_livekit.conf`) qui force le numéro présenté, filtre les destinations et enregistre avec MixMonitor. Elle n'est utile que si l'on ne veut pas passer par les règles d'appels sortants du XiVO. En mode natif, on ne fait que le § 2.3 (trunk PJSIP), avec le contexte choisi ci-dessus à la place de `from-livekit`.
 
 Fichiers fournis (option avancée) :
