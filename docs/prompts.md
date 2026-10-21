@@ -18,12 +18,12 @@ L'essentiel du comportement de l'agent ne se trouve pas dans le code Python : il
 À chaque appel, `build_instructions()` concatène, séparés par `---` :
 
 1. `base.md`
-2. `accueil.md` **ou** `decideur.md`
+2. `accueil.md` puis `decideur.md` (agent unique, rôle `appel`)
 3. la section campagne (générée depuis le YAML)
 4. la fiche prospect (nom, ville, contact, notes Axonaut)
 5. le contexte (date, heure, tentative, créneaux de RDV)
 
-Pour voir le résultat exact : `avp prompt show ehpad --role decideur`.
+Pour voir le résultat exact : `avp prompt show ehpad` (rôle `appel` par défaut : agent unique, `accueil.md` puis `decideur.md`).
 
 Variables utilisables dans les `.md` : `{{entreprise}}`, `{{humain}}`, `{{humain_prenom}}`, `{{campagne}}`, `{{objectif}}`, `{{interlocuteur_cible}}`, `{{alternatives}}`, `{{prospect_nom}}`, `{{prospect_ville}}`, `{{contact_nom}}`, `{{contact_fonction}}`, `{{date_heure}}`, `{{tentative}}`, `{{duree_rdv}}`, `{{mode_rdv}}`, `{{phrase_ouverture}}`.
 
@@ -36,9 +36,14 @@ Variables utilisables dans les `.md` : `{{entreprise}}`, `{{humain}}`, `{{humain
 
 ## Créer une campagne
 
-1. Copier `campaigns/ehpad.yaml` en `campaigns/<nouvel-id>.yaml` (id : minuscules, chiffres, tirets ; identique au nom du fichier).
+Guide complet (fonctionnement de l'agent, calibrage à partir d'un besoin métier, scénarios de
+simulation, mise en service) : [`docs/campagnes/guide-creation.md`](campagnes/guide-creation.md),
+avec la [fiche brief](campagnes/fiche-brief.md) et les modèles de campagne et de simulations.
+Résumé :
+
+1. Copier `docs/campagnes/modele-campagne.yaml` (ou `campaigns/ehpad.yaml`) en `campaigns/<nouvel-id>.yaml` (id : minuscules, chiffres, tirets ; identique au nom du fichier).
 2. Adapter `nom`, `cible`, `offre`, `accroche`, `qualification` (chaque question a un `id` unique en `snake_case`), `objections`, `scoring`, `plages`, `axonaut.pipe` et `axonaut.etapes`.
-3. Vérifier : `avp campaign show <id>` puis `avp prompt show <id> --role decideur`.
+3. Vérifier : `avp campaign show <id>` puis `avp prompt show <id>` ; écrire `simulations/<id>.yaml` et lancer `avp simulation <id>`.
 4. Créer le pipeline et ses étapes dans Axonaut avec **exactement** les mêmes noms (`docs/axonaut.md`).
 5. Tester en console puis par `avp call test` sur votre portable.
 

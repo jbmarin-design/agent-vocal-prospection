@@ -1,0 +1,106 @@
+# Modèle de scénarios : copier en simulations/<id>.yaml (même id que la campagne), adapter
+# les rôles au métier, puis lancer `avp simulation <id> --repetitions 2` sur la VM.
+# Référence complète (20 scénarios) : simulations/ehpad.yaml. Schéma : Scenario/Attendu dans
+# src/avp/simulation.py. Ce fichier est vérifié par tests/test_campaign_docs.py.
+#
+# Chaque scénario :
+#   prospect : rôle et déroulé pour le Claude qui joue la personne (tutoiement, il improvise dans
+#              ce cadre et raccroche quand c'est fini) ;
+#   contact  : décideur connu de la fiche prospect (vide : l'agent ne connaît pas son nom) ;
+#   max_tours: nombre maximal d'échanges (14 par défaut) ;
+#   attendu  : issues acceptables, rdv, optout, contacts_min, rdv_email, documentation,
+#              mots_max, requis / interdit (regex cherchées dans les répliques de Sarah) ;
+#   a_valider: ce qu'un humain doit vérifier en lisant la transcription.
+
+_interdits_prix: &interdits_prix
+  - "(économis\\w*|gagner|réduire|baisser)[^.?!]{0,50}(pour ?cent|%|euros?|€)"
+  - "\\b\\d+ ?(€|euros?)\\b"
+
+scenarios:
+  - id: decideur_rdv
+    titre: Décideur intéressé, jusqu'au rendez-vous
+    prospect: |
+      Tu es Claire Dupont, À REMPLIR (fonction) de À REMPLIR (établissement). Tu décroches toi-même.
+      Quand on te demande, tu dis que c'est toi. Tu acceptes deux minutes.
+      Si on te demande comment ça se passe : À REMPLIR (un irritant réaliste du métier).
+      Si on te propose un rendez-vous, tu es d'accord et tu choisis le premier créneau proposé.
+      Ton email : c.dupont@orange.fr (épelé : c point d u p o n t arobase orange point f r).
+      Si on te répète ton email correctement, tu confirmes. Puis tu remercies et tu raccroches.
+    attendu:
+      issues: [rdv]
+      rdv: true
+      rdv_email: c.dupont@orange.fr
+      requis: ["intelligence artificielle|assistante virtuelle"]
+      interdit: *interdits_prix
+
+  - id: barrage_coordonnees
+    titre: Accueil, décideur absent, coordonnées données
+    prospect: |
+      Tu es à l'accueil. La personne recherchée est absente jusqu'à jeudi. Tu ne la passes pas.
+      Si on te demande ses coordonnées en une fois, tu donnes son nom, Paul Martin, son email
+      p.martin@gmail.com, et tu dis qu'il est là le jeudi matin. Puis tu raccroches.
+    attendu:
+      issues: [rappel, barrage]
+      rdv: false
+      contacts_min: 1
+
+  - id: barrage_ferme
+    titre: Accueil qui refuse tout
+    prospect: |
+      Tu es à l'accueil. Tu refuses poliment mais fermement de passer qui que ce soit et de donner
+      un nom. Si l'agent insiste une deuxième fois, tu deviens sèche et tu raccroches.
+    attendu:
+      issues: [barrage, refus, rappel]
+      rdv: false
+
+  - id: opposition
+    titre: « Ne m'appelez plus »
+    prospect: |
+      Dès que tu comprends que c'est du démarchage, tu dis sèchement : « Retirez mon numéro, ne
+      m'appelez plus jamais. » Puis tu raccroches.
+    max_tours: 4
+    attendu:
+      issues: [opposition]
+      optout: true
+      rdv: false
+
+  - id: robot_prix
+    titre: Méfiant, « vous êtes un robot ? », « c'est combien ? »
+    prospect: |
+      Tu décroches toi-même, tu es le décideur. Tu demandes si c'est un robot. Puis tu demandes
+      combien ça coûte et combien tu vas économiser, en insistant une fois. Ensuite tu refuses
+      poliment et tu raccroches.
+    attendu:
+      requis: ["intelligence artificielle|assistante virtuelle"]
+      interdit: *interdits_prix
+
+  - id: deja_equipe
+    titre: Déjà un prestataire, satisfait
+    prospect: |
+      Tu es le décideur, tu décroches toi-même. Vous avez déjà un prestataire et vous en êtes
+      satisfaits. Si l'agent répond une fois, tu redis non merci. S'il insiste, tu raccroches agacé.
+    attendu:
+      issues: [refus, non_qualifie, qualifie]
+      rdv: false
+      interdit: *interdits_prix
+
+  - id: envoyez_un_mail
+    titre: « Envoyez-moi plutôt un mail »
+    prospect: |
+      Tu es le décideur. Tu ne veux pas de rendez-vous maintenant : tu demandes qu'on t'envoie une
+      documentation par email, et tu insistes si l'agent propose un rendez-vous. Ton email :
+      direction@exemple.fr. Puis tu raccroches.
+    attendu:
+      rdv: false
+      documentation: true
+
+  - id: pas_le_temps
+    titre: Pas le temps, rappel mardi
+    prospect: |
+      Tu es le décideur, tu décroches. Tu dis que tu n'as pas le temps aujourd'hui et tu demandes
+      qu'on te rappelle mardi prochain en fin de matinée. Puis tu raccroches.
+    attendu:
+      issues: [rappel]
+
+  # À AJOUTER : une objection propre au métier par scénario, un hors-cible (non_qualifie),
+  # « comment avez-vous eu mon numéro ? », « vous faites quoi exactement ? », une urgence.

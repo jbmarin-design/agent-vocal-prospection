@@ -1,0 +1,143 @@
+# Modèle de campagne : copier en campaigns/<id>.yaml, puis remplacer chaque « À REMPLIR ».
+# Guide : docs/campagnes/guide-creation.md ; référence calibrée : campaigns/ehpad.yaml.
+# Ce qui sera DIT par Sarah (accroche, questions, réponses aux objections) s'écrit à l'oral :
+# 30 mots au plus, vouvoiement, nombres en lettres, ton enjoué, une question à la fois.
+# Ce fichier est vérifié par tests/test_campaign_docs.py : il doit rester valide.
+
+id: modele                     # = nom du fichier, minuscules/chiffres/tirets (ex. mairies-gers)
+nom: "À REMPLIR Secteur 2026 — offre"
+actif: false                   # true seulement après simulation + appel de test validés
+objectif: rdv                  # rdv | transfert | qualification
+
+cible:
+  interlocuteur: "À REMPLIR : la fonction recherchée, au féminin et au masculin"
+  alternatives:
+    - "À REMPLIR : 2e personne acceptable"
+    - "À REMPLIR : 3e personne acceptable"
+
+offre:
+  # Lu par Claude, jamais récité : le constat du métier, l'offre, la démarche concrète.
+  resume: >-
+    À REMPLIR. Le constat : ce que vit la cible au quotidien côté télécoms, sans reproche.
+    L'offre : ce qu'OpteoLink propose, gratuit ou non, sans engagement ou non.
+    La démarche : ce qui se passe concrètement (échange, visite, compte rendu).
+  points_forts:
+    - "À REMPLIR : un bénéfice concret pour le client, en une phrase."
+    - "Acteur local basé à Toulouse : interlocuteur unique et proche, intervention rapide."
+  # Uniquement des faits validés par JB, cités tels quels. Ni chiffre, ni nom de client.
+  preuves:
+    - "À REMPLIR : preuve validée par JB."
+
+# Dite après l'accord du décideur : un constat reconnaissable, puis UNE question ouverte.
+accroche: >-
+  À REMPLIR : constat en une phrase. Comment ça se passe chez vous aujourd'hui ?
+
+qualification:                 # 5 à 8 questions, 2 ou 3 « obligatoire » ; Sarah en pose 2-3
+  - id: gestion
+    question: "Aujourd'hui, qui s'occupe des télécoms chez vous ?"
+    but: "Qui gère, depuis quand, niveau de maîtrise."
+    obligatoire: true
+  - id: operateurs
+    question: "Qui sont vos opérateurs pour la téléphonie, internet et les mobiles ?"
+    but: "Opérateurs actuels."
+  - id: irritants
+    question: "Est-ce que vous avez des soucis en ce moment, des coupures, des pannes, des délais ?"
+    but: "Irritants techniques et réactivité du prestataire."
+    obligatoire: true
+  - id: echeance
+    question: "Savez-vous quand se terminent vos contrats actuels ?"
+    but: "Échéance et durée d'engagement restante."
+  - id: decisionnaire
+    question: "La décision se prend-elle chez vous, ou au niveau d'un groupe ou d'un siège ?"
+    but: "Circuit de décision."
+    obligatoire: true
+
+objections:                    # 8 à 12, réponses en 1-2 phrases orales qui ramènent à l'objectif
+  - objection: "On a déjà un prestataire."
+    reponse: >-
+      C'est très bien, et ça ne vous engage pas à changer. C'est un regard extérieur, offert.
+  - objection: "Je n'ai pas le temps."
+    reponse: >-
+      Je comprends, je ne vais pas vous retenir. Quel serait le meilleur moment pour vous rappeler ?
+  - objection: "Envoyez-moi un mail."
+    reponse: >-
+      Avec plaisir ! Le plus simple reste un court rendez-vous avec Jean-Baptiste. Ça vous irait ?
+  - objection: "On n'a pas de budget."
+    reponse: >-
+      Je comprends tout à fait. Justement, c'est gratuit, et le but est de vous faire économiser.
+  - objection: "Ce n'est pas moi qui décide."
+    reponse: >-
+      Merci de me le préciser. Qui faudrait-il associer à la réflexion ?
+  - objection: "C'est une IA ? Je ne parle pas aux robots."
+    reponse: >-
+      Oui, je suis une assistante virtuelle, une intelligence artificielle. J'organise les
+      rendez-vous de Jean-Baptiste Marin. Il peut vous rappeler lui-même : quel moment vous irait ?
+  - objection: "C'est combien ?"
+    reponse: >-
+      Ça dépend vraiment de votre installation, je ne peux pas vous donner de chiffre au
+      téléphone. C'est justement ce que Jean-Baptiste regardera avec vous.
+
+scoring:
+  chaud: "À REMPLIR : irritant exprimé, échéance proche, accord pour un rendez-vous."
+  tiede: "À REMPLIR : intérêt poli sans urgence, rappel accepté."
+  froid: "À REMPLIR : satisfait et fermé, décision ailleurs sans contact, refus."
+
+mots_cles_stt:                 # opérateurs, produits, sigles, villes du secteur
+  - OpteoLink
+  - c'est moi
+  - moi-même
+  - Orange
+  - SFR
+  - Bouygues
+  - Free Pro
+  - Toulouse
+
+repondeur:
+  action: raccrocher
+  message: ""
+
+plages:                        # jours : 1 = lundi … 7 = dimanche
+  - jours: [1, 2, 3, 4, 5]
+    debut: "10:00"
+    fin: "12:30"
+  - jours: [1, 2, 3, 4, 5]
+    debut: "14:00"
+    fin: "17:00"
+
+max_tentatives: 3
+delai_entre_tentatives_h: 48
+
+rdv:
+  duree_min: 30
+  mode: "sur place, dans l'établissement"   # tel que Sarah le dira
+  creneaux_proposes: 3
+  delai_min_jours: 2
+  horizon_jours: 15
+  plages:                      # créneaux pris directement (email de confirmation au client)
+    - jours: [2, 4]
+      debut: "09:30"
+      fin: "12:00"
+    - jours: [2, 4]
+      debut: "14:00"
+      fin: "17:30"
+  jours_a_confirmer: [1, 5]    # proposés seulement si rien ne convient ; JB confirme
+  creneaux_a_confirmer: 2
+
+axonaut:                       # noms EXACTS des étapes du pipeline Axonaut (casse, accents)
+  pipe: "À REMPLIR Nom du pipeline"
+  etape_initiale: "À REMPLIR étape des prospects à appeler"
+  etapes:
+    rdv: "À REMPLIR"
+    transfert: "À REMPLIR"
+    rappel: "À REMPLIR"
+    qualifie: "À REMPLIR"
+    refus: "À REMPLIR"
+    non_qualifie: "À REMPLIR"
+    barrage: "À REMPLIR"
+    chaud: "À REMPLIR"
+    tiede: "À REMPLIR"
+    froid: "À REMPLIR"
+
+# Usages du secteur, sujets à éviter, ton. Priment sur les rôles, jamais sur les règles de base.
+instructions_specifiques: >-
+  À REMPLIR. Ne critiquez jamais le prestataire actuel.

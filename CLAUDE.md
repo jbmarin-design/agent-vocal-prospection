@@ -2,6 +2,8 @@
 
 Lire d'abord `docs/passation.md` (état du projet et décisions), puis `docs/architecture.md`. Ce fichier-ci fixe les conventions.
 
+Pour **créer ou calibrer une campagne** (nouvelle cible, nouveau secteur) : `docs/campagnes/guide-creation.md` (skill projet `campagne-prospection`).
+
 ## Conventions
 
 - **Langue** : code (noms de variables, fonctions) en anglais ou français cohérent avec l'existant ; **commentaires, docstrings, doc, prompts et messages CLI en français**.
