@@ -29,7 +29,7 @@ def prospect():
     )
 
 
-@pytest.mark.parametrize("cid", ["ehpad", "cabinets-medicaux", "echo"])
+@pytest.mark.parametrize("cid", ["ehpad", "ehpad-rappel", "cabinets-medicaux", "echo"])
 def test_campagnes_livrees_valides(cid):
     camp = load_campaign(cid, CAMPAIGNS_DIR)
     assert camp.id == cid
@@ -161,3 +161,45 @@ def test_tournures_de_l_offre_parametrables(ehpad, prospect):
         assert phrase in text
     for old in ("sur place : ça vous intéresserait", "télécoms de votre établissement", "Proposer l'audit"):
         assert old not in text
+
+
+# --- Rappel sollicité (campaigns/ehpad-rappel.yaml) -------------------------------------------
+
+
+@pytest.fixture
+def rappel():
+    return load_campaign("ehpad-rappel", CAMPAIGNS_DIR)
+
+
+def test_rappel_ouverture_annonce_ia_et_demande(rappel, prospect):
+    p = prospect.model_copy(update={"campaign_id": "ehpad-rappel", "contact_name": "Madame Marin"})
+    line = prompts.opening_line(rappel, p)
+    assert line.startswith(prompts.OPENING_DISCLOSURE)  # annonce IA inchangée, en tête
+    assert "suite à votre réponse à notre email" in line
+    assert line.endswith("Je parle bien à Madame Marin ?")
+    assert "Pourrais-je parler" not in line
+    sans_nom = prompts.opening_line(rappel, prospect)
+    assert sans_nom.endswith("Est-ce que c'est un bon moment pour vous ?")
+    assert "enregistré" in prompts.opening_line(rappel, p, announce_recording=True)
+
+
+def test_rappel_replique_accord_et_roles(rappel, prospect):
+    assert prompts.decider_hook_line(rappel) == prompts.CALLBACK_HOOK_LINE
+    assert "deux petites minutes" not in prompts.CALLBACK_HOOK_LINE
+    text = prompts.build_instructions("appel", rappel, prospect, now=NOW, prompts_dir=PROMPTS_DIR,
+                                      transfer_available=False)
+    assert "# Votre appel : un rappel demandé" in text
+    assert "passer le standard" not in text  # accueil.md remplacé par rappel.md
+    assert "il vous attend" in text and "qui ne vous attendait pas" not in text
+    assert "numéro public de l'établissement" not in text
+    assert f"« {prompts.CALLBACK_HOOK_LINE} »" in text
+    assert "{{" not in text
+
+
+def test_prospection_inchangee_par_le_rappel(ehpad, prospect):
+    text = prompts.build_instructions("appel", ehpad, prospect, now=NOW, prompts_dir=PROMPTS_DIR,
+                                      transfer_available=False)
+    assert "passer le standard" in text and "rappel demandé" not in text
+    assert "avec un professionnel qui ne vous attendait pas." in text
+    assert "c'est le numéro public de l'établissement, trouvé dans les annuaires et sur internet." in text
+    assert f"« {prompts.decider_hook_line(ehpad)} »" in text

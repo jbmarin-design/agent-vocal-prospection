@@ -199,6 +199,10 @@ class Campaign(BaseModel):
     cible: Target
     offre: Offer
     accroche: str
+    # « prospection » : appel à froid (standard puis décideur, prompts/accueil.md).
+    # « rappel_sollicite » : la personne a demandé l'appel (réponse à un email) ; on appelle le numéro
+    # qu'elle a donné, sans passage de standard (prompts/rappel.md), ouverture et réplique adaptées.
+    type_appel: Literal["prospection", "rappel_sollicite"] = "prospection"
     # Tournures du prompt commun propres à l'offre ; défauts = campagne EHPAD
     # (docs/campagnes/guide-creation.md § 2).
     motif_appel: str = "au sujet des télécoms de votre établissement"  # « je vous appelle … »

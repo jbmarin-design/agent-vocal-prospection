@@ -1,0 +1,240 @@
+# Campagne « rappel sollicité » : démonstration de Sarah aux EHPAD qui l'ont demandée.
+#
+# Origine : campagne email Mautic EHPAD Haute-Garonne et Gers (campagne Mautic n° 2), email 3
+# « Une démonstration un peu particulière » : « Sarah peut vous appeler : en quelques minutes,
+# elle vous présente nos services, répond à vos questions et, si cela vous intéresse, fixe un
+# rendez-vous avec moi. Pour être appelé, répondez à ce message avec le numéro et le moment qui
+# vous conviennent. »
+#
+# La personne a donc DEMANDÉ l'appel : pas de standard à passer (prompts/rappel.md remplace
+# prompts/accueil.md), ouverture et réplique d'accord adaptées (src/avp/prompts.py, type_appel).
+# L'annonce IA en tête de l'ouverture est la même que pour toute campagne (AI Act art. 50).
+#
+# Lancement à la main, prospect par prospect : docs/campagnes/rappel-sollicite.md.
+# Ne jamais passer `actif: true` : chaque rappel se lance au moment choisi par la personne.
+
+id: ehpad-rappel
+nom: "EHPAD 2026 — rappel sollicité, démonstration de Sarah"
+actif: false
+objectif: rdv
+type_appel: rappel_sollicite
+
+cible:
+  interlocuteur: "la personne qui a répondu à notre email"
+  alternatives:
+    - "le directeur ou la directrice de l'établissement"
+    - "l'adjoint ou l'adjointe de direction"
+    - "le responsable technique ou des services généraux"
+
+offre:
+  resume: >-
+    La personne a répondu à l'email « Une démonstration un peu particulière » : elle veut
+    entendre Sarah, savoir ce que fait OpteoLink, et éventuellement rencontrer Jean-Baptiste.
+    OpteoLink est un intégrateur télécom local, à Toulouse, qui intervient dans le Sud-Ouest :
+    Haute-Garonne, Gers et départements voisins. Un seul interlocuteur pour tout ce qui touche
+    au téléphone et à internet dans l'établissement.
+    Le constat, dans beaucoup d'EHPAD : des équipements vieillissants, des interlocuteurs qui
+    ont changé, côté établissement comme côté prestataires, un prestataire pour le réseau, un
+    autre pour internet, un autre pour le téléphone. Au fil du temps, l'établissement a perdu la
+    maîtrise de la façon dont tout cela dialogue. Ce n'est la faute de personne.
+    OpteoLink uniformise l'ensemble, pilote les projets de bout en bout et garantit la fiabilité
+    du tout : téléphonie et standard, téléphones des soignants, accès internet, mobiles. Les accès
+    internet sont redondés : double accès, fibre professionnelle, secours en 4G ou 5G, et pour
+    les sites isolés, internet par satellite. OpteoLink n'installe pas l'appel malade : il
+    l'interconnecte avec la téléphonie, quel que soit le fournisseur.
+    Sarah elle-même est un exemple de ce qu'OpteoLink peut mettre en place dans un EHPAD, pour
+    les appels externes comme internes : accueil et orientation des familles, prise de messages
+    la nuit et le week-end, rappels aux équipes. Elle a été développée par OpteoLink.
+    La suite proposée : un audit gratuit et sans engagement, sur place, avec Jean-Baptiste Marin.
+    Il fait le point sur l'installation et les contrats, puis remet un compte rendu clair :
+    ce qui va, ce qui peut être simplifié, et ce qu'un assistant comme Sarah pourrait apporter.
+  points_forts:
+    - "Un seul interlocuteur local, à Toulouse, pour tout le téléphone et internet de l'établissement, au lieu de plusieurs prestataires qui ne se parlent pas."
+    - "Reprendre la maîtrise : OpteoLink remet l'ensemble à plat, uniformise, et garantit que tout dialogue correctement."
+    - "OpteoLink pilote les projets de bout en bout : un seul responsable, du conseil à la mise en service."
+    - "Internet qui ne tombe pas : double accès, fibre professionnelle, secours en 4G ou 5G, satellite pour les sites isolés."
+    - "L'appel malade n'est pas remplacé : OpteoLink le relie proprement aux téléphones des soignants."
+    - "Un assistant vocal comme Sarah peut accueillir et orienter les familles, prendre les messages la nuit et le week-end, et faire des rappels aux équipes."
+    - "L'audit sur place est gratuit et sans engagement : l'établissement repart avec un état des lieux clair."
+  # Preuves validées par JB pour la campagne EHPAD : reprises telles quelles, sans chiffre ni nom.
+  preuves:
+    - "OpteoLink a déjà réalisé cet audit pour des EHPAD comme le vôtre, avec d'excellents retours."
+    - "OpteoLink travaille avec des EHPAD, des cliniques, des cabinets médicaux et des mairies du Sud-Ouest."
+    - "Sarah, l'assistante qui appelle, a été développée par OpteoLink."
+
+# Dite après l'accord : le constat que la personne reconnaît, puis une question ouverte.
+accroche: >-
+  En deux mots, OpteoLink, c'est un seul interlocuteur local pour le téléphone et internet.
+  Souvent, il y a un prestataire pour chaque chose, et plus personne ne sait comment tout
+  dialogue. C'est un peu le cas chez vous ?
+
+# « Je vous appelle … » : dit à une nouvelle personne après un transfert (decideur.md, étape 1).
+motif_appel: "suite à votre réponse à notre email, pour vous présenter OpteoLink"
+presentation_entreprise: "un intégrateur télécom local, à Toulouse : un seul interlocuteur pour le téléphone et internet, qui pilote tout de bout en bout"
+proposition:
+  nom: "l'audit"
+  exemple: "Le plus simple, c'est que Jean-Baptiste passe vous voir : il fait le point sur place, gratuitement. Ça vous dirait ?"
+  detail: "visite sur place, point sur l'installation et les contrats, compte rendu clair, y compris ce qu'un assistant comme moi pourrait vous apporter"
+
+qualification:
+  - id: motif_reponse
+    question: "Qu'est-ce qui vous a donné envie de répondre à notre email ?"
+    but: "Curiosité pour l'IA, projet d'accueil téléphonique, problème télécom, changement d'équipe. Oriente toute la suite."
+    obligatoire: true
+  - id: maitrise
+    question: "Aujourd'hui, qui s'occupe du téléphone et d'internet chez vous, et combien de prestataires différents interviennent ?"
+    but: "Qui gère, nombre de prestataires (réseau, internet, téléphonie), niveau de maîtrise. Un changement récent d'équipe est un bon signal."
+    obligatoire: true
+  - id: equipements
+    question: "Et votre installation, elle a quel âge à peu près ? Des soucis de pannes ou de coupures ?"
+    but: "Âge du standard et des téléphones des soignants, pannes, coupures internet, réactivité des prestataires."
+    obligatoire: false
+  - id: accueil_appels
+    question: "Comment sont gérés les appels des familles, en particulier le soir et le week-end ?"
+    but: "Besoin d'un assistant vocal : accueil saturé, appels non répondus, messages la nuit, rappels aux équipes."
+    obligatoire: true
+  - id: interconnexions
+    question: "Votre appel malade est-il relié aux téléphones des soignants aujourd'hui ?"
+    but: "Interconnexion appel malade, antifugue, alarmes avec la téléphonie, et si elle fonctionne bien."
+    obligatoire: false
+  - id: echeance
+    question: "Avez-vous un projet ou une échéance de contrat dans les mois qui viennent ?"
+    but: "Fin d'engagement, renouvellement de matériel, projet en cours."
+  - id: decisionnaire
+    question: "Pour ce type de projet, la décision se prend dans l'établissement ou au niveau d'un groupe ?"
+    but: "Circuit de décision : établissement autonome, groupe, siège."
+
+objections:
+  - objection: "Vous êtes un robot ? Une vraie personne ?"
+    reponse: >-
+      Oui ! Je suis Sarah, une intelligence artificielle développée par OpteoLink. C'est justement
+      la démonstration : on peut mettre en place une assistante comme moi dans votre établissement.
+  - objection: "Ça coûte combien ? Et un assistant comme vous ?"
+    reponse: >-
+      Ça dépend vraiment de votre installation et de ce que vous voulez mettre en place. L'audit,
+      lui, est gratuit : Jean-Baptiste vous fera ensuite une proposition précise.
+  - objection: "Je n'ai que deux minutes."
+    reponse: >-
+      Je fais court : un seul interlocuteur local pour le téléphone et internet. Le plus
+      simple, c'est un rendez-vous sur place avec Jean-Baptiste. Ça vous irait ?
+  - objection: "On a déjà un prestataire."
+    reponse: >-
+      Très bien, l'idée n'est pas forcément d'en changer. L'audit est un regard extérieur, offert,
+      pour vérifier que tout dialogue bien. Ça vous dirait quand même ?
+  - objection: "Envoyez-moi plutôt une documentation."
+    reponse: >-
+      Avec plaisir. Le plus utile reste que Jean-Baptiste passe voir votre installation, c'est
+      gratuit. Est-ce qu'un rendez-vous vous irait ?
+  - objection: "Vous faites l'appel malade ?"
+    reponse: >-
+      Non, on ne l'installe pas : on le relie proprement à votre téléphonie et aux téléphones
+      des soignants, quel que soit votre fournisseur.
+  - objection: "Ce n'est pas moi qui décide, c'est le siège."
+    reponse: >-
+      Merci de me le préciser. L'audit donne justement au siège des éléments concrets. Qui
+      faudrait-il associer au rendez-vous ?
+  - objection: "Vous pouvez vraiment répondre aux familles la nuit ?"
+    reponse: >-
+      Une assistante comme moi peut accueillir, orienter et prendre les messages, la nuit et le
+      week-end. Ce qu'elle dit et fait se règle avec vous : Jean-Baptiste vous montrera.
+  - objection: "Et nos données, la confidentialité ?"
+    reponse: >-
+      C'est une vraie question, et elle se traite au cas par cas. Je préfère que Jean-Baptiste
+      vous réponde précisément, pendant le rendez-vous.
+  - objection: "Je voulais juste voir à quoi ça ressemble, merci."
+    reponse: >-
+      Avec plaisir, merci de m'avoir écoutée ! Si un jour vous voulez en parler, il suffit de
+      répondre à l'email de Jean-Baptiste : il passera vous voir gratuitement.
+
+scoring:
+  chaud: "Projet ou irritant concret (plusieurs prestataires, pannes, accueil des familles débordé, échéance proche) et accord pour un rendez-vous sur place."
+  tiede: "Curiosité réelle pour l'assistant ou pour OpteoLink, questions posées, sans rendez-vous ; ou rappel accepté ; ou décision au siège avec contact transmis."
+  froid: "Simple curiosité pour l'IA, aucun besoin exprimé, ou refus poli."
+
+mots_cles_stt:
+  - OpteoLink
+  - Sarah
+  - c'est moi
+  - moi-même
+  - EHPAD
+  - IDEC
+  - DECT
+  - audit
+  - fibre
+  - Starlink
+  - satellite
+  - 4G
+  - 5G
+  - standard
+  - Orange
+  - SFR
+  - Bouygues
+  - Free Pro
+  - appel malade
+  - antifugue
+  - Toulouse
+  - Gers
+  - Haute-Garonne
+
+repondeur:
+  action: raccrocher
+  message: ""
+
+# Rappels lancés à la main au moment demandé : plages larges, en semaine.
+plages:
+  - jours: [1, 2, 3, 4, 5]
+    debut: "09:00"
+    fin: "12:30"
+  - jours: [1, 2, 3, 4, 5]
+    debut: "13:30"
+    fin: "18:30"
+
+max_tentatives: 2
+delai_entre_tentatives_h: 24
+
+rdv:
+  duree_min: 30
+  mode: "sur place, dans l'établissement"
+  creneaux_proposes: 3
+  delai_min_jours: 2
+  horizon_jours: 15
+  plages:
+    - jours: [2, 4]
+      debut: "09:30"
+      fin: "12:00"
+    - jours: [2, 4]
+      debut: "14:00"
+      fin: "17:30"
+  jours_a_confirmer: [1, 5]
+  creneaux_a_confirmer: 2
+
+# Même pipeline que la campagne d'appels EHPAD : les établissements de la campagne email y sont.
+# Le post-appel met à jour l'opportunité existante de la société dans ce pipeline.
+axonaut:
+  pipe: "EHPAD 2026"
+  etape_initiale: "Prospect ciblé"
+  etapes:
+    rdv: "r1"
+    transfert: "r1"
+    rappel: "Contact établi"
+    qualifie: "Contact établi"
+    refus: "refus"
+    non_qualifie: "refus"
+    barrage: "Prospect contacté"
+    chaud: "Contact établi"
+    tiede: "Contact établi"
+    froid: "Contact établi"
+
+instructions_specifiques: >-
+  La personne a demandé cet appel : elle vous attend, soyez chaleureuse et directe.
+  Tôt dans l'échange, au plus tard après l'accroche, dites en une phrase que vous êtes vous-même
+  un exemple de ce qu'OpteoLink peut mettre en place dans un EHPAD : par exemple, accueillir et
+  orienter les familles, prendre les messages la nuit et le week-end, faire des rappels aux équipes.
+  Une seule fois, puis revenez à la personne.
+  Pas de jargon : dites « les téléphones des soignants », jamais « DECT » ; « internet de secours »
+  plutôt que « redondance ». L'appel malade, OpteoLink ne le fournit pas : il le relie à la
+  téléphonie. Ne promettez aucune fonction précise de l'assistant ni de délai : Jean-Baptiste
+  étudiera ce qui est possible chez eux.
+  Répondez d'abord aux questions de la personne, puis proposez le rendez-vous sur place dès
+  qu'elle montre de l'intérêt. Si elle voulait seulement entendre la démonstration, remerciez-la
+  sans insister. Ne parlez jamais des résidents. Ne critiquez jamais le prestataire actuel.

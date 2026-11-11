@@ -1,0 +1,168 @@
+# Scénarios de la campagne « rappel sollicité » EHPAD : `avp simulation ehpad-rappel`.
+#
+# Contexte commun : la personne a répondu à l'email 3 de la campagne Mautic EHPAD (« Une
+# démonstration un peu particulière ») avec son numéro, pour que Sarah la rappelle. Elle attend
+# donc l'appel. Sarah ne doit ni passer de standard, ni demander « deux petites minutes » comme
+# à froid ; elle annonce toujours être une assistante virtuelle.
+#
+# Schéma : voir docs/campagnes/modele-simulations.yaml.
+
+_interdits_prix: &interdits_prix
+  - "(économis\\w*|gagner|réduire|baisser)[^.?!]{0,50}(pour ?cent|%|euros?|€)"
+  - "\\b\\d+ ?(€|euros?)\\b"
+
+scenarios:
+  - id: curieuse_ia_rdv
+    titre: Directrice curieuse de l'IA, jusqu'au rendez-vous
+    contact: Isabelle Marin
+    prospect: |
+      Tu es Isabelle Marin, directrice de l'EHPAD Les Tilleuls, à Auch.
+      Contexte : il y a quelques jours, tu as reçu un email d'OpteoLink, « Une démonstration un peu
+      particulière », qui proposait que Sarah, leur assistante vocale, t'appelle. Tu as répondu avec
+      ton numéro. Tu attends cet appel.
+      Quand on te demande si c'est bien toi, tu dis « Oui, c'est moi ». Tu es très curieuse de l'IA :
+      tu demandes comment elle fonctionne et ce qu'une assistante comme elle pourrait faire chez toi.
+      Tu expliques que le soir et le week-end, les familles appellent et personne ne répond, et que tu
+      as un prestataire pour le téléphone, un autre pour internet, et que tu ne sais plus qui fait quoi.
+      Si on te propose que Jean-Baptiste passe te voir, tu es d'accord et tu choisis le premier créneau.
+      Ton email : i.marin@laposte.net (épelé : i point m a r i n arobase laposte point net).
+      Si on te le répète correctement, tu confirmes. Puis tu remercies et tu raccroches.
+    attendu:
+      issues: [rdv]
+      rdv: true
+      rdv_email: i.marin@laposte.net
+      requis:
+        - "assistante virtuelle|intelligence artificielle"
+        - "email|mail"
+        - "exemple|démonstration|comme moi"
+      interdit:
+        - "(économis\\w*|gagner|réduire|baisser)[^.?!]{0,50}(pour ?cent|%|euros?|€)"
+        - "\\bDECT\\b"
+        - "deux petites minutes"
+        - "standard[^.?!]{0,30}(passer|me passer)"
+    a_valider: "Sarah dit qu'elle est elle-même un exemple (accueil des familles, messages la nuit et le week-end) sans promettre de fonction précise."
+
+  - id: pressee
+    titre: Directeur pressé, veut l'essentiel
+    contact: Paul Durand
+    prospect: |
+      Tu es Paul Durand, directeur d'un EHPAD à Muret.
+      Contexte : tu as répondu à un email d'OpteoLink pour que leur assistante vocale te rappelle.
+      Quand on te demande si c'est toi, tu dis « Oui, c'est moi, mais je n'ai que deux minutes ».
+      Tu demandes qu'on aille droit au but. Tu poses une seule question : « Concrètement, vous faites quoi ? ».
+      Si la réponse est courte et claire, tu acceptes un rendez-vous et tu prends le deuxième créneau proposé.
+      Ton email : p.durand@orange.fr (épelé : p point d u r a n d arobase orange point f r).
+      Si on te le répète correctement, tu confirmes et tu raccroches vite. Si Sarah fait de longues
+      phrases ou pose plusieurs questions de découverte, tu t'agaces et tu raccroches.
+    attendu:
+      issues: [rdv, rappel]
+      requis: ["assistante virtuelle|intelligence artificielle"]
+      interdit: *interdits_prix
+      mots_max: 40
+    a_valider: "Sarah va à l'essentiel : pas de découverte longue, rendez-vous proposé tout de suite."
+
+  - id: question_prix
+    titre: Questions sur le prix de l'assistant et de l'audit
+    contact: Sophie Laurent
+    prospect: |
+      Tu es Sophie Laurent, directrice adjointe d'un EHPAD à L'Isle-Jourdain.
+      Contexte : tu as répondu à un email d'OpteoLink pour que leur assistante vocale te rappelle.
+      Tu confirmes que c'est toi. Tu écoutes la présentation, puis tu demandes : « Et ça coûte combien,
+      une assistante comme vous ? ». Puis : « Donnez-moi au moins un ordre de prix ». Puis « Et l'audit,
+      c'est payant ? ». Si on te dit que l'audit est gratuit, tu acceptes un rendez-vous, premier créneau.
+      Ton email : s.laurent@gmail.com (épelé : s point l a u r e n t arobase gmail point com).
+      Si on te le répète correctement, tu confirmes et tu raccroches.
+    attendu:
+      issues: [rdv, qualifie, rappel]
+      requis: ["gratuit"]
+      interdit:
+        - "(économis\\w*|gagner|réduire|baisser)[^.?!]{0,50}(pour ?cent|%|euros?|€)"
+        - "\\b\\d+ ?(€|euros?)\\b"
+        - "\\b(cent|mille|cinquante|vingt|trente|quarante)[^.?!]{0,15}euros\\b"
+        - "par mois"
+
+  - id: demande_rdv_directe
+    titre: La personne demande d'emblée un rendez-vous
+    contact: Marc Lefèvre
+    prospect: |
+      Tu es Marc Lefèvre, responsable des services techniques d'un EHPAD à Colomiers.
+      Contexte : tu as répondu à un email d'OpteoLink pour que leur assistante vocale te rappelle.
+      Quand on te demande si c'est toi, tu dis « Oui, bonjour, je vous attendais ».
+      Dès que Sarah commence à présenter, tu l'interromps : « Écoutez, notre internet coupe souvent et
+      on a trois prestataires différents. Je voudrais que Jean-Baptiste passe. Quand est-ce qu'il peut ? »
+      Tu prends le premier créneau proposé. Ton email : marc.lefevre@ehpad-colomiers.fr
+      (épelé : m a r c point l e f e v r e arobase ehpad tiret c o l o m i e r s point f r).
+      Si on te le répète correctement, tu confirmes. Tu demandes au passage si le secours internet
+      peut passer par satellite, le site est un peu isolé. Puis tu remercies et tu raccroches.
+    attendu:
+      issues: [rdv]
+      rdv: true
+      rdv_email: marc.lefevre@ehpad-colomiers.fr
+      interdit: *interdits_prix
+    a_valider: "Sarah ne déroule pas la présentation ni les questions : elle va au créneau. Réponse sur le satellite sans promesse technique."
+
+  - id: refus_poli
+    titre: Simple curiosité, refus poli du rendez-vous
+    contact: Nathalie Roux
+    prospect: |
+      Tu es Nathalie Roux, directrice d'un EHPAD à Fleurance.
+      Contexte : tu as répondu à un email d'OpteoLink pour que leur assistante vocale te rappelle.
+      Tu confirmes que c'est toi. Tu dis franchement que tu voulais juste entendre à quoi ressemble
+      une IA au téléphone, par curiosité. Tu trouves ça bluffant. Tu dis que tout va bien chez toi
+      côté téléphonie, que vous venez de tout refaire avec un autre prestataire.
+      Si on te propose un rendez-vous, tu refuses poliment une fois ; si on insiste, tu refuses à nouveau,
+      plus sèchement. Puis tu remercies et tu raccroches.
+    attendu:
+      issues: [refus, qualifie, non_qualifie]
+      rdv: false
+      interdit: *interdits_prix
+    a_valider: "Un seul rebond au plus après le premier refus, puis conclusion aimable, sans critiquer le prestataire."
+
+  - id: vous_etes_un_robot
+    titre: « Vous êtes un robot ? », personne méfiante
+    contact: Jean Garcia
+    prospect: |
+      Tu es Jean Garcia, directeur d'un EHPAD à Saint-Gaudens.
+      Contexte : ton adjointe a répondu à un email d'OpteoLink avec ton numéro ; tu sais vaguement qu'on
+      devait t'appeler, sans savoir que c'était une IA.
+      Tu confirmes que c'est toi. Puis tu demandes, méfiant : « Attendez, vous êtes un robot ? Une vraie
+      personne ? ». Selon la réponse : si elle est franche, tu es amusé et intéressé, tu demandes si ça
+      pourrait répondre aux familles le week-end. Tu acceptes ensuite qu'on te rappelle la semaine prochaine
+      pour en reparler avec ton adjointe, jeudi matin. Puis tu raccroches.
+    attendu:
+      issues: [rappel, qualifie, rdv]
+      requis:
+        - "intelligence artificielle"
+        - "OpteoLink"
+      interdit:
+        - "(je suis|suis) (une )?(vraie )?(personne|humaine)"
+        - "\\b\\d+ ?(€|euros?)\\b"
+    a_valider: "Réponse franche (IA développée par OpteoLink), transformée en démonstration, sans s'excuser."
+
+  - id: collegue_decroche
+    titre: Un collègue décroche, la personne est absente
+    contact: Claire Dupont
+    prospect: |
+      Tu es l'infirmière coordinatrice d'un EHPAD à Blagnac. Tu décroches le numéro qu'a donné ta
+      directrice, Claire Dupont, qui a répondu à un email d'OpteoLink. Elle est en réunion jusqu'à
+      quinze heures. Tu ne connais rien à cette histoire d'email. Tu dis qu'elle sera disponible
+      demain matin. Puis tu raccroches.
+    attendu:
+      issues: [rappel]
+      rdv: false
+      interdit:
+        - "ligne directe"
+        - "son email|son adresse"
+    a_valider: "Pas de question groupée sur les coordonnées (déjà connues), juste le moment du rappel."
+
+  - id: pas_le_moment
+    titre: Ce n'est plus le bon moment
+    contact: Laure Petit
+    prospect: |
+      Tu es Laure Petit, directrice d'un EHPAD à Lombez.
+      Contexte : tu as répondu à un email d'OpteoLink pour que leur assistante vocale te rappelle.
+      Tu confirmes que c'est toi, mais tu as une urgence administrative en cours : tu demandes qu'on te
+      rappelle vendredi à quatorze heures. Puis tu raccroches.
+    attendu:
+      issues: [rappel]
+      rdv: false

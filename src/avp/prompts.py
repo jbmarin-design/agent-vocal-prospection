@@ -48,8 +48,14 @@ ROLE_FILES: dict[Role, tuple[str, ...]] = {
     "decideur": ("decideur.md",),
     "repondeur": ("repondeur.md",),
 }
+# Rappel sollicité (`type_appel: rappel_sollicite`) : la personne a demandé l'appel, pas de standard
+# à passer ; prompts/rappel.md remplace prompts/accueil.md dans l'agent unique.
+CALLBACK_ROLE_FILES: dict[Role, tuple[str, ...]] = {
+    "appel": ("rappel.md", "decideur.md"),
+    "accueil": ("rappel.md",),
+}
 # Fichiers pris en compte dans la version des prompts.
-PROMPT_FILES: tuple[str, ...] = (BASE_FILE, "accueil.md", "decideur.md", "repondeur.md")
+PROMPT_FILES: tuple[str, ...] = (BASE_FILE, "accueil.md", "rappel.md", "decideur.md", "repondeur.md")
 
 COMPANY = "OpteoLink"
 HUMAN_NAME = "Jean-Baptiste Marin"
@@ -66,6 +72,11 @@ OPENING_DISCLOSURE = f"Bonjour ! Ici {AGENT_NAME}, l'assistante virtuelle d'Opte
 OPENING_RECORDING = "Cet appel est enregistré."
 OPENING_ASK = "Pourrais-je parler {cible}, s'il vous plaît ?"
 OPENING_TEST = "Il s'agit d'un test technique d'OpteoLink, cela ne prendra qu'une minute."
+# Rappel sollicité : la personne a répondu à notre email avec son numéro. L'annonce IA
+# (OPENING_DISCLOSURE) reste en tête, inchangée.
+OPENING_CALLBACK = "Je vous appelle suite à votre réponse à notre email."
+OPENING_CALLBACK_ASK = "Je parle bien {cible} ?"
+OPENING_CALLBACK_NO_NAME = "Est-ce que c'est un bon moment pour vous ?"
 LENGTH_REMINDER = (
     "Rappel, à chaque réplique : trente mots au maximum, une ou deux phrases, un seul paragraphe. "
     "Une seule idée, puis vous laissez parler votre interlocuteur."
@@ -78,6 +89,12 @@ LENGTH_REMINDER = (
 DECIDER_HOOK_LINE = (
     f"Merci ! Alors, je vous appelle de la part de {HUMAN_NAME}… {{motif}}. "
     "Est-ce que vous auriez deux petites minutes ?"
+)
+# Réplique FIXE du rappel sollicité, quand la personne confirme que c'est elle : elle attend l'appel,
+# on ne demande pas « deux petites minutes » pour un motif qu'elle connaît déjà.
+CALLBACK_HOOK_LINE = (
+    "Merci ! Comme promis, je vous présente OpteoLink en quelques minutes… "
+    "Et vous allez voir, je suis moi-même un exemple de ce qu'on peut faire. C'est un bon moment ?"
 )
 # Au revoir FIXE, dit par le worker en fin d'appel (agents.finish_call), jamais par Claude.
 CLOSING_LINE = "Merci à vous, et très bonne journée ! Au revoir."
@@ -169,23 +186,43 @@ def is_test_campaign(campaign: Campaign) -> bool:
     return campaign.id.startswith(TEST_CAMPAIGN_PREFIXES)
 
 
+def is_callback_campaign(campaign: Campaign) -> bool:
+    """Vrai pour un rappel sollicité : la personne a demandé l'appel (réponse à un email)."""
+    return campaign.type_appel == "rappel_sollicite"
+
+
+def role_files(role: Role, campaign: Campaign) -> tuple[str, ...]:
+    """Fichiers de rôle lus pour cette campagne (rappel sollicité : rappel.md au lieu d'accueil.md)."""
+    if is_callback_campaign(campaign) and role in CALLBACK_ROLE_FILES:
+        return CALLBACK_ROLE_FILES[role]
+    return ROLE_FILES[role]
+
+
 def opening_line(campaign: Campaign, prospect: Prospect, *, announce_recording: bool = False) -> str:
     """Phrase d'ouverture FIXE, dite mot pour mot dès le décroché d'un humain.
 
     « Sarah, l'assistante virtuelle d'OpteoLink », puis demande de l'interlocuteur cible (le contact
     connu s'il y en a un). `announce_recording` : ajoute l'annonce d'enregistrement, quand le XiVO
     ne la joue pas lui-même. Pour une campagne de test technique (id « echo… »), annonce le test au
-    lieu de demander quelqu'un.
+    lieu de demander quelqu'un. Pour un rappel sollicité, rappelle la demande de la personne et vérifie
+    qu'on lui parle bien ; l'annonce IA en tête est la même.
     """
     head = f"{OPENING_DISCLOSURE} {OPENING_RECORDING}" if announce_recording else OPENING_DISCLOSURE
     if is_test_campaign(campaign):
         return f"{head} {OPENING_TEST}"
+    if is_callback_campaign(campaign):
+        name = prospect.contact_name.strip()
+        ask = OPENING_CALLBACK_ASK.format(cible=_contract_a(name)) if name else OPENING_CALLBACK_NO_NAME
+        return f"{head} {OPENING_CALLBACK} {ask}"
     cible = prospect.contact_name.strip() or campaign.cible.interlocuteur.strip() or "la direction"
     return f"{head} {OPENING_ASK.format(cible=_contract_a(cible))}"
 
 
 def decider_hook_line(campaign: Campaign) -> str:
-    """Réplique FIXE dite quand le décideur a décroché lui-même, avec le motif de la campagne."""
+    """Réplique FIXE dite quand le décideur a décroché lui-même, avec le motif de la campagne
+    (rappel sollicité : réplique propre, la personne attend l'appel)."""
+    if is_callback_campaign(campaign):
+        return CALLBACK_HOOK_LINE
     return DECIDER_HOOK_LINE.format(motif=campaign.motif_appel.strip().rstrip("."))
 
 
@@ -221,6 +258,19 @@ def template_variables(
         "proposition_detail": campaign.proposition.detail.strip(),
         "presentation_entreprise": campaign.presentation_entreprise.strip().rstrip("."),
         "phrase_ouverture": opening_line(campaign, prospect),
+        "replique_accord": decider_hook_line(campaign),
+        "situation_appel": (
+            "Vous parlez au téléphone, en français, avec un professionnel qui a demandé cet appel en répondant "
+            f"à un email d'{COMPANY} : il vous attend."
+            if is_callback_campaign(campaign)
+            else "Vous parlez au téléphone, en français, avec un professionnel qui ne vous attendait pas."
+        ),
+        "origine_numero": (
+            "c'est le numéro que la personne a donné elle-même en répondant à l'email d'"
+            f"{COMPANY} pour être rappelée"
+            if is_callback_campaign(campaign)
+            else "c'est le numéro public de l'établissement, trouvé dans les annuaires et sur internet"
+        ),
     }
 
 
@@ -415,7 +465,8 @@ def build_instructions(
     directory = _prompts_dir(prompts_dir)
     variables = template_variables(campaign, prospect, now=now, attempt=attempt, timezone=timezone)
     base = render_template(_read_prompt(directory, BASE_FILE), variables)
-    role_text = "\n\n".join(render_template(_read_prompt(directory, f), variables) for f in ROLE_FILES[role])
+    role_text = "\n\n".join(render_template(_read_prompt(directory, f), variables)
+                            for f in role_files(role, campaign))
     parts = [
         base,
         role_text,
@@ -447,6 +498,9 @@ def prompt_version(
         h.update(path.read_bytes() if path.exists() else b"<absent>")
     h.update(b"<opening>")
     h.update("\n".join((OPENING_DISCLOSURE, OPENING_ASK, OPENING_TEST)).encode())
+    if is_callback_campaign(campaign):  # n'altère pas la version des campagnes de prospection
+        h.update("\n".join((OPENING_CALLBACK, OPENING_CALLBACK_ASK, OPENING_CALLBACK_NO_NAME,
+                            CALLBACK_HOOK_LINE)).encode())
     cdir = Path(campaigns_dir) if campaigns_dir is not None else Path(get_settings().campaigns_dir)
     yaml_path = cdir / f"{campaign.id}.yaml"
     h.update(f"<campaign:{campaign.id}>".encode())
