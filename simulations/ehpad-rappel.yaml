@@ -34,7 +34,7 @@ scenarios:
       requis:
         - "assistante virtuelle|intelligence artificielle"
         - "email|mail"
-        - "exemple|démonstration|comme moi"
+        - "exemple|démonstration|comme moi|je (peux|pourrais) (accueillir|prendre)"
       interdit:
         - "(économis\\w*|gagner|réduire|baisser)[^.?!]{0,50}(pour ?cent|%|euros?|€)"
         - "\\bDECT\\b"
