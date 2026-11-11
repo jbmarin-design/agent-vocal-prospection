@@ -11,6 +11,7 @@ Fichiers liés :
 | [`fiche-brief.md`](fiche-brief.md) | Questions à poser à JB avant d'écrire une campagne |
 | [`modele-campagne.yaml`](modele-campagne.yaml) | Squelette commenté, à copier en `campaigns/<id>.yaml` |
 | [`modele-simulations.yaml`](modele-simulations.yaml) | Squelette des scénarios de test, à copier en `simulations/<id>.yaml` |
+| [`rappel-sollicite.md`](rappel-sollicite.md) | Campagne `ehpad-rappel` : rappel demandé par email, lancement à la main |
 | `campaigns/ehpad.yaml` | **Campagne de référence**, calibrée et validée au téléphone (octobre 2026) |
 | `simulations/ehpad.yaml` | 20 scénarios de référence (barrages, objections, refus, RDV…) |
 | `docs/prompts.md` | Les couches du prompt et les commandes de contrôle |
@@ -115,6 +116,7 @@ erreurs). Chaque champ ci-dessous : ce qu'il fait pendant l'appel → comment l'
 | `nom` | Titre lu par Claude, rapports | « Secteur année — offre » |
 | `actif` | Le démon appelle si `true` | `false` tant que la campagne n'est pas validée |
 | `objectif` | `rdv`, `transfert` ou `qualification` | `rdv` dans presque tous les cas |
+| `type_appel` | `prospection` (appel à froid, standard puis décideur) ou `rappel_sollicite` (la personne a demandé l'appel : ouverture « suite à votre réponse à notre email », pas de standard, `prompts/rappel.md`) | `prospection` par défaut ; `rappel_sollicite` : voir [`rappel-sollicite.md`](rappel-sollicite.md) |
 | `cible.interlocuteur` | Qui Sarah demande au standard (si aucun contact connu) | Fonction au féminin et masculin, telle qu'on la dit : « le directeur ou la directrice » |
 | `cible.alternatives` | Personnes acceptables à défaut | 2 à 4 fonctions, de la plus à la moins pertinente |
 | `offre.resume` | Ce que Sarah *comprend* de l'offre (jamais récité) | Le constat du métier, puis l'offre, puis la démarche concrète. Texte de fond, 10-20 lignes |
