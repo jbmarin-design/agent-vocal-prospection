@@ -286,7 +286,7 @@ async def test_sync_echeance_lointaine_cree_une_relance(tmp_path: Path):
 
 async def test_sync_rappel_updates_existing_opportunity(tmp_path: Path):
     ax = FakeAxonaut(existing={"id": 77, "comments": "historique"})
-    when = datetime(2026, 11, 3, 9, 0, tzinfo=UTC)
+    when = datetime(2030, 11, 5, 9, 0, tzinfo=UTC)  # dans le futur : un rappel passé est ramené à aujourd'hui
     rec = record(CallOutcome.RAPPEL, callback=Callback(when=when, ask_for="M. Durand"))
     res = await sync_axonaut(rec, analysis(), campaign(), axonaut=ax, settings=settings_for(tmp_path))
     assert not ax.of("create_opportunity")
@@ -294,7 +294,7 @@ async def test_sync_rappel_updates_existing_opportunity(tmp_path: Path):
     assert upd["id"] == 77 and upd["step_name"] == "À rappeler" and upd["probability"] == 50.0
     assert upd["comments"].endswith("historique") and "appel IA" in upd["comments"]
     task = ax.of("create_task")[0]
-    assert task["title"] == "Rappeler M. Durand — EHPAD Les Tilleuls" and str(task["due"]) == "2026-11-03"
+    assert task["title"] == "Rappeler M. Durand — EHPAD Les Tilleuls" and str(task["due"]) == "2030-11-05"
     assert ax.of("create_event")[0]["opportunity_id"] == 77
     assert res["opportunity_action"] == "maj"
 
@@ -557,11 +557,11 @@ async def test_process_call_met_a_jour_la_fiche_prospect(tmp_path: Path):
     st, call_id, pid = setup_db(tmp_path, rec)
     data = {**GOOD, "contacts": [{"prenom": "Isabelle", "nom": "Marin", "fonction": "directrice",
                                   "email": "i.marin@laposte.net"}],
-            "rappel": {"ask_for": "Mme Marin", "notes": "jeudi matin", "when": "2026-10-22T09:00:00+02:00"}}
+            "rappel": {"ask_for": "Mme Marin", "notes": "jeudi matin", "when": "2030-10-22T09:00:00+02:00"}}
     await process_call(call_id, llm_client=FakeLLM(data), axonaut=FakeAxonaut(), settings=st)  # type: ignore[arg-type]
     row = db.get_prospect_row(pid, st.db_path)
     assert row and row["contact_name"] == "Isabelle Marin" and row["contact_role"] == "directrice"
-    assert row["status"] == "a_rappeler" and row["next_attempt_at"].startswith("2026-10-22")
+    assert row["status"] == "a_rappeler" and row["next_attempt_at"].startswith("2030-10-22")
 
 
 async def test_evenement_axonaut_html_avec_transcription(tmp_path: Path):
