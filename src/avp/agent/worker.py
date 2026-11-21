@@ -36,6 +36,7 @@ from ..config import get_settings
 from ..livekit_admin import participant_identity_for, sip_headers_for
 from ..models import CallMetadata, CallOutcome
 from ..prompts import opening_line, prompt_version
+from ..telephonie import telephonie_effective
 from .agents import AgentAppel, AgentRepondeur, finish_call, hang_up
 from .logic import (
     GOODBYE_GRACE_S,
@@ -309,7 +310,8 @@ async def entrypoint(ctx: JobContext) -> None:
         ud.state.end_reason = "dry_run"
         ctx.shutdown("dry_run")
         return
-    if not settings.sip_outbound_trunk_id:
+    telephonie = telephonie_effective(campaign, settings)
+    if not telephonie.trunk_sortant:
         logger.error("SIP_OUTBOUND_TRUNK_ID vide : lancez `avp trunk create` et renseignez .env")
         ud.state.outcome = CallOutcome.ERREUR
         ud.state.end_reason = "trunk non configuré"
@@ -341,8 +343,9 @@ async def entrypoint(ctx: JobContext) -> None:
             await ctx.api.sip.create_sip_participant(
                 api.CreateSIPParticipantRequest(
                     room_name=ctx.room.name,
-                    sip_trunk_id=settings.sip_outbound_trunk_id,
+                    sip_trunk_id=telephonie.trunk_sortant,
                     sip_call_to=meta.prospect.phone,
+                    sip_number=telephonie.numero_presente,  # vide = numéro du trunk
                     participant_identity=identity,
                     participant_name=meta.prospect.name[:60],
                     headers=sip_headers_for(meta.call_id),

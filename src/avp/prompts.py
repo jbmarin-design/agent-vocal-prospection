@@ -33,6 +33,7 @@ from zoneinfo import ZoneInfo
 from .config import get_settings
 from .models import Campaign, Prospect
 from .phone import to_national_fr
+from .telephonie import telephonie_effective
 
 logger = logging.getLogger("avp.prompts")
 
@@ -456,10 +457,11 @@ def build_instructions(
 ) -> str:
     """Assemble les instructions système d'un rôle : base + rôle + campagne + fiche + contexte.
 
-    `transfer_available` : None = déduit de `TRANSFER_TARGET` (vide = transfert désactivé).
+    `transfer_available` : None = déduit de la campagne (`telephonie.transfert`), sinon de
+    `TRANSFER_TARGET` (vide = transfert désactivé).
     """
     if transfer_available is None:
-        transfer_available = bool(get_settings().transfer_target)
+        transfer_available = telephonie_effective(campaign, get_settings()).transfert_disponible
     if role not in ROLE_FILES:
         raise ValueError(f"rôle inconnu : {role!r} (attendu : {', '.join(ROLES)})")
     directory = _prompts_dir(prompts_dir)

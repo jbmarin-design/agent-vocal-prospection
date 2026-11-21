@@ -191,6 +191,25 @@ class AxonautMapping(BaseModel):
     montant_defaut: float | None = None
 
 
+class Telephonie(BaseModel):
+    """Réglages téléphoniques propres à une campagne. Chaque champ vide (ou None) reprend la valeur
+    du `.env` : une campagne sans bloc `telephonie:` se comporte exactement comme avant.
+
+    Le choix du trunk XiVO de sortie se fait à la main côté XiVO (routes, contextes) ; ici, on ne
+    fait que choisir parmi ce qui existe déjà.
+    """
+
+    # Trunk sortant LiveKit (ID ST_xxx, `avp trunk list`) ; vide = SIP_OUTBOUND_TRUNK_ID.
+    trunk_sortant: str = Field(default="", pattern=r"^(ST_[A-Za-z0-9]+)?$")
+    # Numéro présenté (E.164) ; vide = numéro du trunk (SIP_CALLER_NUMBER).
+    numero_presente: str = Field(default="", pattern=r"^(\+[1-9][0-9]{6,14})?$")
+    # Destination du transfert à chaud (sip:… ou tel:…) ; vide = TRANSFER_TARGET.
+    transfert: str = Field(default="", pattern=r"^((sip|tel):\S+)?$")
+    # Plafond d'appels simultanés de la campagne ; None = MAX_CONCURRENT_CALLS. Le plafond global
+    # du `.env` (ressources de la VM) reste toujours appliqué en plus.
+    appels_simultanes_max: int | None = Field(default=None, ge=1)
+
+
 class Campaign(BaseModel):
     id: str = Field(pattern=r"^[a-z0-9-]+$")
     nom: str
@@ -225,6 +244,7 @@ class Campaign(BaseModel):
     delai_entre_tentatives_h: int = 48
     rdv: RdvPolicy = Field(default_factory=RdvPolicy)
     axonaut: AxonautMapping | None = None
+    telephonie: Telephonie = Field(default_factory=Telephonie)
     instructions_specifiques: str = ""
 
     def in_window(self, dt: datetime) -> bool:

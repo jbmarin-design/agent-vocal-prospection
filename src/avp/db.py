@@ -381,9 +381,15 @@ def calls_to_analyze(limit: int = 20, db_path: Path | None = None) -> list[dict[
         return [dict(r) for r in rows]
 
 
-def count_active_calls(db_path: Path | None = None) -> int:
+def count_active_calls(db_path: Path | None = None, *, campaign_id: str | None = None) -> int:
+    """Appels planifiés ou en cours, tous confondus ou d'une seule campagne."""
+    sql = "SELECT COUNT(*) FROM calls WHERE status IN ('planifie','en_cours')"
+    params: tuple[str, ...] = ()
+    if campaign_id is not None:
+        sql += " AND campaign_id = ?"
+        params = (campaign_id,)
     with connect(db_path) as c:
-        return c.execute("SELECT COUNT(*) FROM calls WHERE status IN ('planifie','en_cours')").fetchone()[0]
+        return c.execute(sql, params).fetchone()[0]
 
 
 def fail_stale_calls(older_than: datetime, db_path: Path | None = None) -> int:

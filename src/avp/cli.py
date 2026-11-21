@@ -102,6 +102,18 @@ def _load_campaign(campaign_id: str, s: Settings) -> Campaign:
         raise CliError(f"campagne {campaign_id} invalide : {e}") from e
 
 
+def _telephonie_propre(c: Campaign) -> str:
+    """Réglages du bloc `telephonie:` qui remplacent le `.env` (vide si aucun)."""
+    t = c.telephonie
+    morceaux = [
+        f"trunk {t.trunk_sortant}" if t.trunk_sortant else "",
+        f"numéro présenté {t.numero_presente}" if t.numero_presente else "",
+        f"transfert {t.transfert}" if t.transfert else "",
+        f"{t.appels_simultanes_max} appel(s) simultané(s) max" if t.appels_simultanes_max else "",
+    ]
+    return ", ".join(m for m in morceaux if m)
+
+
 def _campaign_ids(s: Settings) -> list[str]:
     return sorted(p.stem for p in s.campaigns_dir.glob("*.yaml")) if s.campaigns_dir.exists() else []
 
@@ -179,6 +191,9 @@ def cmd_check(args: argparse.Namespace) -> int:
         try:
             c = load_campaign(cid, s.campaigns_dir)
             ok(f"Campagne {cid}", f"{c.nom} ({'active' if c.actif else 'inactive'})")
+            propres = _telephonie_propre(c)
+            if propres:
+                ok(f"  téléphonie {cid}", propres)
         except Exception as e:
             fail(f"Campagne {cid}", str(e).splitlines()[0])
 

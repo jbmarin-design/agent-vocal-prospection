@@ -273,3 +273,25 @@ async def test_launch_does_not_override_worker_status(db_ready: Settings, test_c
     call_id = await launch_call(p, test_campaign, attempt=1, now=MONDAY_11H, settings=db_ready, dispatch=fast_worker)
     row = db.get_call(call_id)
     assert row is not None and row["status"] == "termine"
+
+
+async def test_tick_plafond_par_campagne(
+    db_ready: Settings, make_campaign: Callable[..., Campaign]
+) -> None:
+    """`telephonie.appels_simultanes_max` limite la campagne sans brider les autres."""
+    from avp.models import Telephonie
+
+    limitee = make_campaign(id="limitee", telephonie=Telephonie(appels_simultanes_max=1))
+    libre = make_campaign(id="libre")
+    _add_prospects("limitee", 3)
+    _add_prospects("libre", 3, start=50)
+    db_ready.max_concurrent_calls = 3
+    disp = FakeDispatch()
+    s = _scheduler(db_ready, [limitee, libre], disp)
+    await s.tick(MONDAY_11H.astimezone(UTC))
+    par_campagne = [m.campaign_id for m in disp.metas]
+    assert par_campagne.count("limitee") == 1
+    assert par_campagne.count("libre") == 2
+    # Un 2e tour ne relance rien pour « limitee » tant que son appel est en cours
+    await s.tick(MONDAY_11H.astimezone(UTC))
+    assert [m.campaign_id for m in disp.metas].count("limitee") == 1

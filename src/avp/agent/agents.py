@@ -27,6 +27,7 @@ from livekit.agents import Agent, RunContext, StopResponse, ToolError, function_
 from ..livekit_admin import participant_identity_for
 from ..models import CallOutcome
 from ..prompts import CLOSING_LINE, build_instructions, decider_hook_line
+from ..telephonie import telephonie_effective
 from .logic import (
     COMPLAINT_HINT,
     END_OUTCOMES,
@@ -126,7 +127,7 @@ def _instructions(ud: CallUserData, role: str) -> str:
         rdv_slots=ud.meta.rdv_slots,
         prompts_dir=ud.settings.prompts_dir,
         timezone=ud.settings.timezone,
-        transfer_available=bool(ud.settings.transfer_target),
+        transfer_available=telephonie_effective(ud.campaign, ud.settings).transfert_disponible,
     )
 
 
@@ -259,8 +260,8 @@ class AgentAppel(_BaseProspectAgent):
 
     def __init__(self, ud: CallUserData, **kwargs) -> None:
         super().__init__(ud, **kwargs)
-        if not ud.settings.transfer_target:
-            # Transfert désactivé (TRANSFER_TARGET vide) : l'outil n'est même pas proposé à Claude.
+        if not telephonie_effective(ud.campaign, ud.settings).transfert_disponible:
+            # Transfert désactivé (ni `telephonie.transfert` dans la campagne, ni TRANSFER_TARGET) : l'outil n'est même pas proposé à Claude.
             self._tools = [t for t in self._tools if getattr(t, "id", "") != "transferer_a_un_humain"]
 
     async def on_user_turn_completed(self, turn_ctx, new_message) -> None:
@@ -301,7 +302,7 @@ class AgentAppel(_BaseProspectAgent):
             motif: Pourquoi le transfert (demande de la personne, fort intérêt…).
         """
         ud = context.userdata
-        target = ud.settings.transfer_target
+        target = telephonie_effective(ud.campaign, ud.settings).transfert
         if not target:
             raise ToolError("Le transfert n'est pas configuré. Proposez un rendez-vous ou un rappel.")
         if ud.console:

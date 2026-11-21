@@ -150,6 +150,14 @@ axonaut:                       # noms EXACTS des étapes du pipeline Axonaut (ca
     tiede: "À REMPLIR"
     froid: "À REMPLIR"
 
+# Téléphonie propre à la campagne. Chaque champ vide reprend le .env (SIP_OUTBOUND_TRUNK_ID,
+# SIP_CALLER_NUMBER, TRANSFER_TARGET, MAX_CONCURRENT_CALLS, qui reste aussi le plafond global).
+telephonie:
+  trunk_sortant: ""            # ID ST_xxx (`avp trunk list`)
+  numero_presente: ""          # E.164, ex. +33562000000
+  transfert: ""                # sip:1001@xivo… ou tel:+336…
+  appels_simultanes_max:       # vide = MAX_CONCURRENT_CALLS
+
 # Usages du secteur, sujets à éviter, ton. Priment sur les rôles, jamais sur les règles de base.
 instructions_specifiques: >-
   À REMPLIR. Ne critiquez jamais le prestataire actuel.

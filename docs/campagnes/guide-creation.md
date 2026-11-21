@@ -135,6 +135,7 @@ erreurs). Chaque champ ci-dessous : ce qu'il fait pendant l'appel → comment l'
 | `max_tentatives` / `delai_entre_tentatives_h` | Relances | 3 essais au plus (≤ 4 / 30 jours), 48 h d'écart |
 | `rdv` | Durée, mode, créneaux | `mode` tel qu'il sera dit ; `plages` = créneaux pris directement ; `jours_a_confirmer` = sous réserve, JB confirme |
 | `axonaut` | Pipeline et étape selon l'issue | Noms **exacts** des étapes Axonaut (casse, accents) ; clés = issues (`rdv`, `rappel`, `barrage`, `refus`, `non_qualifie`, `qualifie`, `transfert`) et scores (`chaud`, `tiede`, `froid`) |
+| `telephonie` | Trunk sortant LiveKit (`trunk_sortant`, ID `ST_xxx`), numéro présenté (`numero_presente`, E.164), transfert à chaud (`transfert`, `sip:` ou `tel:`), plafond d'appels simultanés (`appels_simultanes_max`) | Laisser vide en général : chaque champ vide reprend le `.env`. Le plafond global `MAX_CONCURRENT_CALLS` s'applique toujours. Le trunk XiVO de sortie se règle à la main côté XiVO ; `avp check` affiche ce que la campagne remplace |
 | `instructions_specifiques` | Consignes du secteur (priment sur les rôles) | Usages et tabous du métier, ton, sujets à éviter |
 
 ## 4. Calibrer une campagne à partir d'un besoin métier

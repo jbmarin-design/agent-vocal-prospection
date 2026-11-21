@@ -29,6 +29,7 @@ from .. import db
 from ..campaigns import list_campaigns
 from ..config import Settings, get_settings
 from ..models import CallMetadata, CallOutcome, Campaign, Prospect, ProspectStatus
+from ..telephonie import telephonie_effective
 from . import load_module
 from .calendar_fr import holiday_name, is_business_day, load_closed_days
 from .slots import compute_rdv_slots
@@ -297,6 +298,14 @@ class Scheduler:
             if capacity <= 0:
                 log.debug("Capacité atteinte (%d appels simultanés)", self.settings.max_concurrent_calls)
                 break
+            # Plafond propre à la campagne (bloc `telephonie:`), sous le plafond global.
+            plafond = telephonie_effective(campaign, self.settings).appels_simultanes_max
+            if plafond < self.settings.max_concurrent_calls:
+                actifs = await asyncio.to_thread(db.count_active_calls, campaign_id=campaign.id)
+                capacity = min(capacity, plafond - actifs)
+                if capacity <= 0:
+                    log.debug("Campagne %s : plafond atteint (%d appels simultanés)", campaign.id, plafond)
+                    continue
             prospects = await asyncio.to_thread(
                 db.claim_due_prospects, campaign.id, now, capacity, campaign.max_tentatives
             )
